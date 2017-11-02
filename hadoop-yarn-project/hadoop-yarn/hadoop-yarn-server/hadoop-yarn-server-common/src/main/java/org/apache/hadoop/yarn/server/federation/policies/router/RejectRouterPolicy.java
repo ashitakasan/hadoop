@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
  * This is useful to prevent applications running in a queue to be run anywhere
  * in the federated cluster.
  */
-public class RejectRouterPolicy extends AbstractRouterPolicy {
+public class RejectRouterPolicy extends AbstractRouterPolicy {                      // 拒绝所有路由请求，主要用于禁止某个队列提交作业
 
   @Override
   public void reinitialize(

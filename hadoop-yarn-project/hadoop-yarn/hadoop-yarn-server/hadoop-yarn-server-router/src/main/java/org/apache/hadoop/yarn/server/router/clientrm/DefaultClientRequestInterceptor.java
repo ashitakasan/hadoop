@@ -101,7 +101,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class DefaultClientRequestInterceptor
     extends AbstractClientRequestInterceptor {
-  private ApplicationClientProtocol clientRMProxy;
+  private ApplicationClientProtocol clientRMProxy;                                  // 默认的请求拦截器只有一个 clientRM 代理
 
   @Override
   public void init(String userName) {

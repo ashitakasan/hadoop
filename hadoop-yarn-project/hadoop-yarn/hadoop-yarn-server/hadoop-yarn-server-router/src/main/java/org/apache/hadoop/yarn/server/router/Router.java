@@ -64,8 +64,8 @@ public class Router extends CompositeService {
   private static CompositeServiceShutdownHook routerShutdownHook;
   private Configuration conf;
   private AtomicBoolean isStopping = new AtomicBoolean(false);
-  private RouterClientRMService clientRMProxyService;
-  private RouterRMAdminService rmAdminProxyService;
+  private RouterClientRMService clientRMProxyService;                               // Router 作为 service 接收 client 的请求，并转发到 RM 上
+  private RouterRMAdminService rmAdminProxyService;                                 // Router 只处理 admin 请求的服务
   private WebApp webApp;
   @VisibleForTesting
   protected String webAppAddress;
@@ -97,7 +97,7 @@ public class Router extends CompositeService {
     // WebService
     webAppAddress = WebAppUtils.getWebAppBindURL(this.conf,
         YarnConfiguration.ROUTER_BIND_HOST,
-        WebAppUtils.getRouterWebAppURLWithoutScheme(this.conf));
+        WebAppUtils.getRouterWebAppURLWithoutScheme(this.conf));                    // 启动 web ui
     // Metrics
     DefaultMetricsSystem.initialize(METRICS_NAME);
     super.serviceInit(conf);

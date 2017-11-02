@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
  * This policy implements a weighted random sample among currently active
  * sub-clusters.
  */
-public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
+public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {              // 以 weight 为权重在当前活动的子集群中随机选择启动 app
 
   @Override
   public SubClusterId getHomeSubcluster(
@@ -70,7 +70,7 @@ public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
       }
     }
 
-    int pickedIndex = FederationPolicyUtils.getWeightedRandom(weightList);
+    int pickedIndex = FederationPolicyUtils.getWeightedRandom(weightList);          // 在子集群中随机选值，weight 越高越容易被选中
     if (pickedIndex == -1) {
       throw new FederationPolicyException(
           "No positive weight found on active subclusters");

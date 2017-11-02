@@ -69,7 +69,7 @@ public class DefaultRMAdminRequestInterceptor
     extends AbstractRMAdminRequestInterceptor {
   private static final Logger LOG =
       LoggerFactory.getLogger(DefaultRMAdminRequestInterceptor.class);
-  private ResourceManagerAdministrationProtocol rmAdminProxy;
+  private ResourceManagerAdministrationProtocol rmAdminProxy;                       // 默认的 admin 请求拦截器只有一个 RM 代理
   private UserGroupInformation user = null;
 
   @Override

@@ -41,7 +41,7 @@ public class WeightedLocalityPolicyManager
     //this structurally hard-codes two compatible policies for Router and
     // AMRMProxy.
     routerFederationPolicy =  WeightedRandomRouterPolicy.class;
-    amrmProxyFederationPolicy = LocalityMulticastAMRMProxyPolicy.class;
+    amrmProxyFederationPolicy = LocalityMulticastAMRMProxyPolicy.class;             // 依据各个子集群的权重（和资源余量）选择集群启动 app 及分发资源请求
     weightedPolicyInfo = new WeightedPolicyInfo();
   }
 

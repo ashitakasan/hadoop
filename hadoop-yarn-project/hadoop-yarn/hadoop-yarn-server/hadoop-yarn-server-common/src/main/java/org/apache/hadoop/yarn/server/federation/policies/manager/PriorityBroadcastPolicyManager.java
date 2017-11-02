@@ -41,7 +41,7 @@ public class PriorityBroadcastPolicyManager extends AbstractPolicyManager {
     // this structurally hard-codes two compatible policies for Router and
     // AMRMProxy.
     routerFederationPolicy = PriorityRouterPolicy.class;
-    amrmProxyFederationPolicy = BroadcastAMRMProxyPolicy.class;
+    amrmProxyFederationPolicy = BroadcastAMRMProxyPolicy.class;                     // 根据 weights 进行路由，并将资源请求广播到各个集群
     weightedPolicyInfo = new WeightedPolicyInfo();
   }
 

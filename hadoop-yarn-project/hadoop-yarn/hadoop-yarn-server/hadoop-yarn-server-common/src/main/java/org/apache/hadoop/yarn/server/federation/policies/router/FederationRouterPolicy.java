@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
  * Implements the logic for determining the routing of an application submission
  * based on a policy.
  */
-public interface FederationRouterPolicy extends ConfigurableFederationPolicy {
+  public interface FederationRouterPolicy extends ConfigurableFederationPolicy {      // 该接口提供了应用程序提交到子集群的策略
 
   /**
    * Determines the sub-cluster that the user application submission should be
@@ -48,5 +48,5 @@ public interface FederationRouterPolicy extends ConfigurableFederationPolicy {
    */
   SubClusterId getHomeSubcluster(
       ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blackListSubClusters) throws YarnException;
+      List<SubClusterId> blackListSubClusters) throws YarnException;                // 决定了应用程序应当提交到那个子集群
 }

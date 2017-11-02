@@ -118,19 +118,19 @@ import com.google.common.annotations.VisibleForTesting;
  * modify the request/response as needed. The main difference with
  * AMRMProxyService is the protocol they implement.
  */
-public class RouterClientRMService extends AbstractService
+public class RouterClientRMService extends AbstractService                          // Router 转发 client 的 RPC 请求到 RM 上
     implements ApplicationClientProtocol {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterClientRMService.class);
 
   private Server server;
-  private InetSocketAddress listenerEndpoint;
+  private InetSocketAddress listenerEndpoint;                                       // Router RPC server 监听地址和端口
 
   // For each user we store an interceptors' pipeline.
   // For performance issue we use LRU cache to keep in memory the newest ones
   // and remove the oldest used ones.
-  private Map<String, RequestInterceptorChainWrapper> userPipelineMap;
+  private Map<String, RequestInterceptorChainWrapper> userPipelineMap;              // 用户到拦截器的映射，使用 LRU 为缓存
 
   public RouterClientRMService() {
     super(RouterClientRMService.class.getName());
@@ -151,7 +151,7 @@ public class RouterClientRMService extends AbstractService
 
     int maxCacheSize =
         conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
-            YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
+            YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);              // userPipelineMap 大小，如果用户不是很多（几百），可配置该参数为用户数量
     this.userPipelineMap = Collections.synchronizedMap(
         new LRUCacheHashMap<String, RequestInterceptorChainWrapper>(
             maxCacheSize, true));
@@ -160,9 +160,9 @@ public class RouterClientRMService extends AbstractService
 
     int numWorkerThreads =
         serverConf.getInt(YarnConfiguration.RM_CLIENT_THREAD_COUNT,
-            YarnConfiguration.DEFAULT_RM_CLIENT_THREAD_COUNT);
+            YarnConfiguration.DEFAULT_RM_CLIENT_THREAD_COUNT);                      // RPC server 工作线程数量，与 RM 配置一样即可
 
-    this.server = rpc.getServer(ApplicationClientProtocol.class, this,
+    this.server = rpc.getServer(ApplicationClientProtocol.class, this,              // 启动 RPC server，接收客户端发给 RM 的请求
         listenerEndpoint, serverConf, null, numWorkerThreads);
 
     this.server.start();
@@ -190,7 +190,7 @@ public class RouterClientRMService extends AbstractService
   private List<String> getInterceptorClassNames(Configuration conf) {
     String configuredInterceptorClassNames =
         conf.get(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
-            YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_INTERCEPTOR_CLASS);
+            YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_INTERCEPTOR_CLASS);           // Router 拦截器类的列表，有序的
 
     List<String> interceptorClassNames = new ArrayList<String>();
     Collection<String> tempList =
@@ -204,9 +204,9 @@ public class RouterClientRMService extends AbstractService
 
   @Override
   public GetNewApplicationResponse getNewApplication(
-      GetNewApplicationRequest request) throws YarnException, IOException {
-    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
-    return pipeline.getRootInterceptor().getNewApplication(request);
+      GetNewApplicationRequest request) throws YarnException, IOException {         // Router 转发 NewApp 请求到 RM，通过具体的拦截器执行请求转发
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();                // 根据当前用户名，查找用户对应的拦截器链
+    return pipeline.getRootInterceptor().getNewApplication(request);                // Router 作为代理，接收客户端请求，并发给 RM
   }
 
   @Override
@@ -430,7 +430,7 @@ public class RouterClientRMService extends AbstractService
     return pipeline.getRootInterceptor().getResourceTypeInfo(request);
   }
 
-  private RequestInterceptorChainWrapper getInterceptorChain()
+  private RequestInterceptorChainWrapper getInterceptorChain()                      // 根据当前用户名，查找用户对应的拦截器链
       throws IOException {
     String user = UserGroupInformation.getCurrentUser().getUserName();
     if (!userPipelineMap.containsKey(user)) {
@@ -459,7 +459,7 @@ public class RouterClientRMService extends AbstractService
   protected ClientRequestInterceptor createRequestInterceptorChain() {
     Configuration conf = getConfig();
 
-    List<String> interceptorClassNames = getInterceptorClassNames(conf);
+    List<String> interceptorClassNames = getInterceptorClassNames(conf);            // 获取配置的所有的拦截器名
 
     ClientRequestInterceptor pipeline = null;
     ClientRequestInterceptor current = null;
@@ -475,7 +475,7 @@ public class RouterClientRMService extends AbstractService
             current = interceptorInstance;
             continue;
           } else {
-            current.setNextInterceptor(interceptorInstance);
+            current.setNextInterceptor(interceptorInstance);                        // 构造所有的拦截器，生成有序的拦截器链
             current = interceptorInstance;
           }
         } else {
@@ -503,7 +503,7 @@ public class RouterClientRMService extends AbstractService
    *
    * @param user
    */
-  private void initializePipeline(String user) {
+  private void initializePipeline(String user) {                                    // 初始化用户对应的拦截器
     RequestInterceptorChainWrapper chainWrapper = null;
     synchronized (this.userPipelineMap) {
       if (this.userPipelineMap.containsKey(user)) {
@@ -512,7 +512,7 @@ public class RouterClientRMService extends AbstractService
         return;
       }
 
-      chainWrapper = new RequestInterceptorChainWrapper();
+      chainWrapper = new RequestInterceptorChainWrapper();                          // 构造新的拦截器的包装类
       this.userPipelineMap.put(user, chainWrapper);
     }
 
@@ -525,7 +525,7 @@ public class RouterClientRMService extends AbstractService
 
     try {
       ClientRequestInterceptor interceptorChain =
-          this.createRequestInterceptorChain();
+          this.createRequestInterceptorChain();                                     // 构造新的拦截器链，通过 wrapper 包装
       interceptorChain.init(user);
       chainWrapper.init(interceptorChain);
     } catch (Exception e) {
@@ -541,7 +541,7 @@ public class RouterClientRMService extends AbstractService
    *
    */
   @Private
-  public static class RequestInterceptorChainWrapper {
+  public static class RequestInterceptorChainWrapper {                              // 拦截器的包装类只包含拦截器链的第一个拦截器
     private ClientRequestInterceptor rootInterceptor;
 
     /**

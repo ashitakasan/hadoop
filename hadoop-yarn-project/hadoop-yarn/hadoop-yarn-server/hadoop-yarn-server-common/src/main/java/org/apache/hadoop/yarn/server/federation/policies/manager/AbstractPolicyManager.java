@@ -40,7 +40,7 @@ public abstract class AbstractPolicyManager implements
   @SuppressWarnings("checkstyle:visibilitymodifier")
   protected Class routerFederationPolicy;
   @SuppressWarnings("checkstyle:visibilitymodifier")
-  protected Class amrmProxyFederationPolicy;
+  protected Class amrmProxyFederationPolicy;                                        // 每个 PolicyManager 都对应了一个 queue、router 策略、AMRM 策略
 
   public static final Logger LOG =
       LoggerFactory.getLogger(AbstractPolicyManager.class);
@@ -63,7 +63,7 @@ public abstract class AbstractPolicyManager implements
   public FederationAMRMProxyPolicy getAMRMPolicy(
       FederationPolicyInitializationContext federationPolicyContext,
       FederationAMRMProxyPolicy oldInstance)
-      throws FederationPolicyInitializationException {
+      throws FederationPolicyInitializationException {                              // 返回 AMRMProxyPolicy，并根据情况决定是否重新初始化
 
     if (amrmProxyFederationPolicy == null) {
       throw new FederationPolicyInitializationException("The parameter "
@@ -73,7 +73,7 @@ public abstract class AbstractPolicyManager implements
 
     try {
       return (FederationAMRMProxyPolicy) internalPolicyGetter(
-          federationPolicyContext, oldInstance, amrmProxyFederationPolicy);
+          federationPolicyContext, oldInstance, amrmProxyFederationPolicy);         // 执行到这里，说明储存或缓存中的策略已经改变，需要重新初始化
     } catch (ClassCastException e) {
       throw new FederationPolicyInitializationException(e);
     }
@@ -100,7 +100,7 @@ public abstract class AbstractPolicyManager implements
   public FederationRouterPolicy getRouterPolicy(
       FederationPolicyInitializationContext federationPolicyContext,
       FederationRouterPolicy oldInstance)
-      throws FederationPolicyInitializationException {
+      throws FederationPolicyInitializationException {                              // 返回 RouterPolicy，并根据情况决定是否重新初始化
 
     //checks that sub-types properly initialize the types of policies
     if (routerFederationPolicy == null) {
@@ -144,7 +144,7 @@ public abstract class AbstractPolicyManager implements
   private ConfigurableFederationPolicy internalPolicyGetter(
       final FederationPolicyInitializationContext federationPolicyContext,
       ConfigurableFederationPolicy oldInstance, Class policy)
-      throws FederationPolicyInitializationException {
+      throws FederationPolicyInitializationException {                              // 初始化或直接返回一个 FederationPolicy
 
     FederationPolicyInitializationContextValidator
         .validate(federationPolicyContext, this.getClass().getCanonicalName());
@@ -162,7 +162,7 @@ public abstract class AbstractPolicyManager implements
     //copying the context to avoid side-effects
     FederationPolicyInitializationContext modifiedContext =
         updateContext(federationPolicyContext,
-            oldInstance.getClass().getCanonicalName());
+            oldInstance.getClass().getCanonicalName());                             // 执行到这里，说明储存或缓存中的策略已经改变，需要重新初始化
 
     oldInstance.reinitialize(modifiedContext);
     return oldInstance;

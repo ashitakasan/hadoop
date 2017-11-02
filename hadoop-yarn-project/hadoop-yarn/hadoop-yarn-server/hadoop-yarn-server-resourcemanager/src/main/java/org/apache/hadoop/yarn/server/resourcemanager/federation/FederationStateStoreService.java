@@ -106,7 +106,7 @@ public class FederationStateStoreService extends AbstractService
         (FederationStateStore) FederationStateStoreFacade.createRetryInstance(
             conf, YarnConfiguration.FEDERATION_STATESTORE_CLIENT_CLASS,
             YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS,
-            FederationStateStore.class, retryPolicy);
+            FederationStateStore.class, retryPolicy);                               // RM 此时作为 store 的 client
     this.stateStoreClient.init(conf);
     LOG.info("Initialized state store client class");
 
@@ -115,7 +115,7 @@ public class FederationStateStoreService extends AbstractService
 
     heartbeatInterval = conf.getLong(
         YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS,
-        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS);
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS);   // 默认 RM 每 300 秒向 Router 发一次心跳
     if (heartbeatInterval <= 0) {
       heartbeatInterval =
           YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS;
@@ -182,7 +182,7 @@ public class FederationStateStoreService extends AbstractService
 
     SubClusterInfo subClusterInfo = SubClusterInfo.newInstance(subClusterId,
         amRMAddress, clientRMAddress, rmAdminAddress, webAppAddress,
-        SubClusterState.SC_NEW, ResourceManager.getClusterTimeStamp(), "");
+        SubClusterState.SC_NEW, ResourceManager.getClusterTimeStamp(), "");         // 构造当前 RM 的 subClusterInfo 的 PB，以注册到 Router
     try {
       registerSubCluster(SubClusterRegisterRequest.newInstance(subClusterInfo));
       LOG.info("Successfully registered for federation subcluster: {}",
@@ -196,7 +196,7 @@ public class FederationStateStoreService extends AbstractService
     scheduledExecutorService =
         HadoopExecutors.newSingleThreadScheduledExecutor();
     scheduledExecutorService.scheduleWithFixedDelay(stateStoreHeartbeat,
-        heartbeatInterval, heartbeatInterval, TimeUnit.SECONDS);
+        heartbeatInterval, heartbeatInterval, TimeUnit.SECONDS);                    // RM 定时（默认 300s）向 Router 汇报心跳
     LOG.info("Started federation membership heartbeat with interval: {}",
         heartbeatInterval);
   }
@@ -243,14 +243,14 @@ public class FederationStateStoreService extends AbstractService
   public SubClusterRegisterResponse registerSubCluster(
       SubClusterRegisterRequest registerSubClusterRequest)
       throws YarnException {
-    return stateStoreClient.registerSubCluster(registerSubClusterRequest);
+    return stateStoreClient.registerSubCluster(registerSubClusterRequest);          // 向具体的 sotre 的实现注册当前 RM
   }
 
   @Override
   public SubClusterDeregisterResponse deregisterSubCluster(
       SubClusterDeregisterRequest subClusterDeregisterRequest)
       throws YarnException {
-    return stateStoreClient.deregisterSubCluster(subClusterDeregisterRequest);
+    return stateStoreClient.deregisterSubCluster(subClusterDeregisterRequest);      // 向具体的 sotre 的实现注销当前 RM
   }
 
   @Override

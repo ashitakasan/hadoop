@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
  * An implementation of the {@link FederationAMRMProxyPolicy} that simply
  * rejects all requests. Useful to prevent apps from accessing any sub-cluster.
  */
-public class RejectAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
+public class RejectAMRMProxyPolicy extends AbstractAMRMProxyPolicy {                // 拒绝所有请求，主要用于禁止某个队列发起资源请求
 
   private Set<SubClusterId> knownClusterIds = new HashSet<>();
 

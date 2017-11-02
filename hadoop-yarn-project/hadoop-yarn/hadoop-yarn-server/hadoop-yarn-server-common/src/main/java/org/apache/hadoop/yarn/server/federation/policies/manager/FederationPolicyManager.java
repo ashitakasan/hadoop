@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyCo
  * (combining incompatible policies).
  *
  */
-public interface FederationPolicyManager {
+public interface FederationPolicyManager {                                          // 该接口提供了 FD策略的管理、储存
 
   /**
    * If the current instance is compatible, this method returns the same
@@ -99,7 +99,7 @@ public interface FederationPolicyManager {
    *           be serialized properly
    */
   SubClusterPolicyConfiguration serializeConf()
-      throws FederationPolicyInitializationException;
+      throws FederationPolicyInitializationException;                               // 序列化 ClusterPolicyConfig 以写入 FS store
 
   /**
    * This method returns the queue this policy is configured for.
@@ -113,6 +113,6 @@ public interface FederationPolicyManager {
    *
    * @param queue the name of the queue.
    */
-  void setQueue(String queue);
+  void setQueue(String queue);                                                      // 指定当前策略是为哪个队列配置的
 
 }

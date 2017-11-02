@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
  * queues exist in a system. This also ensures that all jobs belonging to a
  * queue are mapped to the same sub-cluster (likely help with locality).
  */
-public class HashBasedRouterPolicy extends AbstractRouterPolicy {
+public class HashBasedRouterPolicy extends AbstractRouterPolicy {                   // 根据 queue 的 hbase 选择子集群，可确保同一队列的所有作业都在同一子集群
 
   @Override
   public void reinitialize(
@@ -71,7 +71,7 @@ public class HashBasedRouterPolicy extends AbstractRouterPolicy {
   @Override
   public SubClusterId getHomeSubcluster(
       ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blackListSubClusters) throws YarnException {
+      List<SubClusterId> blackListSubClusters) throws YarnException {               // 根据 queue 的 hash 路由到排序的子集群中，如果子集群数量变了可能出问题
 
     // throws if no active subclusters available
     Map<SubClusterId, SubClusterInfo> activeSubclusters =

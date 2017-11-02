@@ -38,7 +38,7 @@ import org.codehaus.jettison.json.JSONObject;
  * binary 0/1 values that enable/disable each sub-cluster, and the policy peaks
  * the sub-cluster with the least load to forward this application.
  */
-public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
+public class LoadBasedRouterPolicy extends AbstractRouterPolicy {                   // 简单的负载均衡路由，转发作业请求到 load 最小的集群上（内存）
 
   @Override
   public void reinitialize(FederationPolicyInitializationContext policyContext)
@@ -51,7 +51,7 @@ public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
     super.reinitialize(policyContext);
 
     // check extra constraints
-    for (Float weight : getPolicyInfo().getRouterPolicyWeights().values()) {
+    for (Float weight : getPolicyInfo().getRouterPolicyWeights().values()) {        // 利用 weight = 0 或 1 来实现
       if (weight != 0 && weight != 1) {
         // reset to old policyInfo if check fails
         setPolicyInfo(tempPolicy);

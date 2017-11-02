@@ -52,10 +52,10 @@ import com.google.common.base.Preconditions;
 
 /**
  * An implementation of the {@link FederationAMRMProxyPolicy} interface that
- * carefully multicasts the requests with the following behavior:
+ * carefully multicasts the requests with the following behavior:                   // FD AMRM 策略按照以下规则转发资源请求：
  *
  * <p>
- * Host localized {@link ResourceRequest}s are always forwarded to the RM that
+ * Host localized {@link ResourceRequest}s are always forwarded to the RM that      // 主机本地化：如果其他子集群不能解析资源请求，则请求发往 home 集群
  * owns the corresponding node, based on the feedback of a
  * {@link SubClusterResolver}. If the {@link SubClusterResolver} cannot resolve
  * this node we default to forwarding the {@link ResourceRequest} to the home
@@ -63,7 +63,7 @@ import com.google.common.base.Preconditions;
  * </p>
  *
  * <p>
- * Rack localized {@link ResourceRequest}s are forwarded to the RMs that owns
+ * Rack localized {@link ResourceRequest}s are forwarded to the RMs that owns       // 机架本地化：资源请求优先发往同一机架上的节点的 RM
  * the corresponding rack. Note that in some deployments each rack could be
  * striped across multiple RMs. Thsi policy respects that. If the
  * {@link SubClusterResolver} cannot resolve this rack we default to forwarding
@@ -71,16 +71,16 @@ import com.google.common.base.Preconditions;
  * </p>
  *
  * <p>
- * ANY requests corresponding to node/rack local requests are forwarded only to
+ * ANY requests corresponding to node/rack local requests are forwarded only to     // 任何本地化请求只转发到拥有相应本地化资源的节点的 RM
  * the set of RMs that owns the corresponding localized requests. The number of
  * containers listed in each ANY is proportional to the number of localized
  * container requests (associated to this ANY via the same allocateRequestId).
  * </p>
  *
  * <p>
- * ANY that are not associated to node/rack local requests are split among RMs
- * based on the "weights" in the {@link WeightedPolicyInfo} configuration *and*
- * headroom information. The {@code headroomAlpha} parameter of the policy
+ * ANY that are not associated to node/rack local requests are split among RMs      // 所有没有本地化要求的请求会依据 WeightedPolicy 的配置和动态余量来拆分
+ * based on the "weights" in the {@link WeightedPolicyInfo} configuration *and*     // headroomAlpha 为 1 表明仅依赖 headroom 拆分请求
+ * headroom information. The {@code headroomAlpha} parameter of the policy          // headroomAlpha 为 0 表明仅依赖 weights 拆分请求
  * configuration indicates how much headroom contributes to the splitting
  * choice. Value of 1.0f indicates the weights are interpreted only as 0/1
  * boolean but all splitting is based on the advertised headroom (fallback to
@@ -105,7 +105,7 @@ import com.google.common.base.Preconditions;
  * </p>
  *
  * <p>
- * The policy always excludes RMs that do not appear in the policy configuration
+ * The policy always excludes RMs that do not appear in the policy configuration    // 策略总是排除不在策略配置权重中或权重为 0 的 RM
  * weights, or have a weight of 0 (even if localized resources explicit refer to
  * it).
  * </p>
@@ -117,7 +117,7 @@ import com.google.common.base.Preconditions;
  * or equal to number of sub-clusters in the federation.
  * </p>
  */
-public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
+public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {     // 优先选择本地化的资源请求策略
 
   public static final Logger LOG =
       LoggerFactory.getLogger(LocalityMulticastAMRMProxyPolicy.class);
@@ -139,7 +139,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     // save reference to old weights
     WeightedPolicyInfo tempPolicy = getPolicyInfo();
 
-    super.reinitialize(policyContext);
+    super.reinitialize(policyContext);                                              // 保存旧的策略后，重新初始化
     if (!getIsDirty()) {
       return;
     }
@@ -158,7 +158,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
         newWeightsConverted.put(e.getKey().toId(), e.getValue());
       }
     }
-    if (allInactive) {
+    if (allInactive) {                                                              // 如果没有 active 的子集群，则恢复之前的策略配置并抛异常
       // reset the policyInfo and throw
       setPolicyInfo(tempPolicy);
       throw new FederationPolicyInitializationException(
@@ -202,7 +202,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     // active subclusters. Create a new instance per call because this method
     // can be called concurrently.
     bookkeeper = new AllocationBookkeeper();
-    bookkeeper.reinitialize(federationFacade.getSubClusters(true));
+    bookkeeper.reinitialize(federationFacade.getSubClusters(true));                 // 每次拆分请求都要创建一个 Bookkeeper，因为该方法可能并发执行
 
     List<ResourceRequest> nonLocalizedRequests =
         new ArrayList<ResourceRequest>();
@@ -217,14 +217,14 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       targetIds = null;
 
       // Handle: ANY (accumulated for later)
-      if (ResourceRequest.isAnyLocation(rr.getResourceName())) {
+      if (ResourceRequest.isAnyLocation(rr.getResourceName())) {                    // 首先取出无本地化要求的资源请求
         nonLocalizedRequests.add(rr);
         continue;
       }
 
       // Handle "node" requests
       try {
-        targetId = resolver.getSubClusterForNode(rr.getResourceName());
+        targetId = resolver.getSubClusterForNode(rr.getResourceName());             // 按照资源请求的节点名称，将资源请求分为子集群本地、机架本地、其他
       } catch (YarnException e) {
         // this might happen as we can't differentiate node from rack names
         // we log altogether later
@@ -279,7 +279,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     }
 
     // handle all non-localized requests (ANY)
-    splitAnyRequests(nonLocalizedRequests, bookkeeper);
+    splitAnyRequests(nonLocalizedRequests, bookkeeper);                             // 拆分资源请求，记录在 bookkeeper 中并返回拆分结果
 
     return bookkeeper.getAnswer();
   }
@@ -288,7 +288,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
    * It splits a list of non-localized resource requests among sub-clusters.
    */
   private void splitAnyRequests(List<ResourceRequest> originalResourceRequests,
-      AllocationBookkeeper allocationBookkeeper) throws YarnException {
+      AllocationBookkeeper allocationBookkeeper) throws YarnException {             // 拆分无本地化要求的资源请求
 
     for (ResourceRequest resourceRequest : originalResourceRequests) {
 
@@ -296,7 +296,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       // is associated with other localized requests via an allocationId)
       Long allocationId = resourceRequest.getAllocationRequestId();
       Set<SubClusterId> targetSubclusters;
-      if (allocationBookkeeper.getSubClustersForId(allocationId) != null) {
+      if (allocationBookkeeper.getSubClustersForId(allocationId) != null) {         // 查询可以分配资源的子集群
         targetSubclusters =
             allocationBookkeeper.getSubClustersForId(allocationId);
       } else {
@@ -326,7 +326,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     // any RM we have previously contacted (this might be the user way
     // to cancel a previous request).
     if (numContainer == 0) {
-      for (SubClusterId targetId : headroom.keySet()) {
+      for (SubClusterId targetId : headroom.keySet()) {                             // 如果资源请求量是 0，则这里需要转发到所有的子集群
         allocationBookkeeper.addAnyRR(targetId, originalResourceRequest);
       }
       return;
@@ -350,7 +350,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
             getPolicyConfigWeighting(targetId, allocationBookkeeper);
         // hrAlpha controls how much headroom influencing decision
         weightsList
-            .add(hrAlpha * headroomWeighting + (1 - hrAlpha) * policyWeighting);
+            .add(hrAlpha * headroomWeighting + (1 - hrAlpha) * policyWeighting);    // hrAlpha 控制了资源余量和策略配置的侧重度
       }
     }
 
@@ -358,7 +358,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     ArrayList<Integer> containerNums =
         computeIntegerAssignment(numContainer, weightsList);
     int i = 0;
-    for (SubClusterId targetId : targetSCs) {
+    for (SubClusterId targetId : targetSCs) {                                       // 资源拆分完成后，构造所有的子集群相应的资源请求
       // if the calculated request is non-empty add it to the answer
       if (containerNums.get(i) > 0) {
         ResourceRequest out =
@@ -391,7 +391,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
    */
   @VisibleForTesting
   protected ArrayList<Integer> computeIntegerAssignment(int totalNum,
-      ArrayList<Float> weightsList) throws YarnException {
+      ArrayList<Float> weightsList) throws YarnException {                          // 根据 weightsList 将资源总量拆分成多个子请求
     int i, residue;
     ArrayList<Integer> ret = new ArrayList<>();
     float totalWeight = 0, totalNumFloat = totalNum;
@@ -437,7 +437,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
    * requests a subcluster is target of.
    */
   private float getLocalityBasedWeighting(long reqId, SubClusterId targetId,
-      AllocationBookkeeper allocationBookkeeper) {
+      AllocationBookkeeper allocationBookkeeper) {                                  // 根据已经分配的本地化请求占比计算权重
     float totWeight = allocationBookkeeper.getTotNumLocalizedContainers(reqId);
     float localWeight =
         allocationBookkeeper.getNumLocalizedContainers(reqId, targetId);
@@ -449,7 +449,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
    * policy weights (for the active subclusters).
    */
   private float getPolicyConfigWeighting(SubClusterId targetId,
-      AllocationBookkeeper allocationBookkeeper) {
+      AllocationBookkeeper allocationBookkeeper) {                                  // 根据各个子集群的策略配置计算权重
     float totWeight = allocationBookkeeper.totPolicyWeight;
     Float localWeight = allocationBookkeeper.policyWeights.get(targetId);
     return (localWeight != null && totWeight > 0) ? localWeight / totWeight : 0;
@@ -461,7 +461,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
    * not seen yet. If all RMs report zero headroom, we fallback to 1/N again.
    */
   private float getHeadroomWeighting(SubClusterId targetId,
-      AllocationBookkeeper allocationBookkeeper) {
+      AllocationBookkeeper allocationBookkeeper) {                                  // 根据当前所有子集群的资源余量计算权重
 
     // baseline weight for all RMs
     float headroomWeighting =
@@ -491,16 +491,16 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
    * This helper class is used to book-keep the requests made to each
    * subcluster, and maintain useful statistics to split ANY requests.
    */
-  private final class AllocationBookkeeper {
+  private final class AllocationBookkeeper {                                        // 用户记录对于每个子集群的资源请求的拆分
 
     // the answer being accumulated
-    private Map<SubClusterId, List<ResourceRequest>> answer = new TreeMap<>();
+    private Map<SubClusterId, List<ResourceRequest>> answer = new TreeMap<>();      // 记录了资源请求拆分后分发到每个子集群的请求列表
 
     // stores how many containers we have allocated in each RM for localized
     // asks, used to correctly "spread" the corresponding ANY
-    private Map<Long, Map<SubClusterId, AtomicLong>> countContainersPerRM =
+    private Map<Long, Map<SubClusterId, AtomicLong>> countContainersPerRM =         // 记录每个本地化请求在每个 RM 上分配 container 数量
         new HashMap<>();
-    private Map<Long, AtomicLong> totNumLocalizedContainers = new HashMap<>();
+    private Map<Long, AtomicLong> totNumLocalizedContainers = new HashMap<>();      // 记录每个本地化请求分配的总的 container 数量
 
     private Set<SubClusterId> activeAndEnabledSC = new HashSet<>();
     private float totHeadroomMemory = 0;
@@ -529,7 +529,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
       // pre-compute the set of subclusters that are both active and enabled by
       // the policy weights, and accumulate their total weight
-      for (Map.Entry<SubClusterId, Float> entry : policyWeights.entrySet()) {
+      for (Map.Entry<SubClusterId, Float> entry : policyWeights.entrySet()) {       // 根据策略配置计算各个子集群权重
         if (entry.getValue() > 0
             && activeSubclusters.containsKey(entry.getKey())) {
           activeAndEnabledSC.add(entry.getKey());
@@ -544,7 +544,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       }
 
       // pre-compute headroom-based weights for active/enabled subclusters
-      for (Map.Entry<SubClusterId, Resource> r : headroom.entrySet()) {
+      for (Map.Entry<SubClusterId, Resource> r : headroom.entrySet()) {             // 计算当前各个子集群中资源容量
         if (activeAndEnabledSC.contains(r.getKey())) {
           totHeadroomMemory += r.getValue().getMemorySize();
           totHeadRoomEnabledRMs++;
@@ -556,7 +556,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
      * Add to the answer a localized node request, and keeps track of statistics
      * on a per-allocation-id and per-subcluster bases.
      */
-    private void addLocalizedNodeRR(SubClusterId targetId, ResourceRequest rr) {
+    private void addLocalizedNodeRR(SubClusterId targetId, ResourceRequest rr) {    // 记录本地化资源请求的分配情况
       Preconditions
           .checkArgument(!ResourceRequest.isAnyLocation(rr.getResourceName()));
 
@@ -588,7 +588,7 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     /**
      * Add a rack-local request to the final asnwer.
      */
-    public void addRackRR(SubClusterId targetId, ResourceRequest rr) {
+    public void addRackRR(SubClusterId targetId, ResourceRequest rr) {              // 记录机架本地化资源请求的分配情况
       Preconditions
           .checkArgument(!ResourceRequest.isAnyLocation(rr.getResourceName()));
       internalAddToAnswer(targetId, rr);

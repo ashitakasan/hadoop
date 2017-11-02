@@ -31,9 +31,9 @@ import java.util.Map;
  */
 public abstract class AbstractSubClusterResolver implements SubClusterResolver {
   private Map<String, SubClusterId> nodeToSubCluster =
-      new ConcurrentHashMap<String, SubClusterId>();
+      new ConcurrentHashMap<String, SubClusterId>();                                                  // 存储了所有 节点<->子集群 之间的映射关系
   private Map<String, Set<SubClusterId>> rackToSubClusters =
-      new ConcurrentHashMap<String, Set<SubClusterId>>();
+      new ConcurrentHashMap<String, Set<SubClusterId>>();                                                  // 存储了所有 节点<->机架 之间的映射关系
 
   @Override
   public SubClusterId getSubClusterForNode(String nodename)

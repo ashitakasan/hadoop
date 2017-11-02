@@ -50,7 +50,7 @@ public abstract class AbstractConfigurableFederationPolicy
 
     // perform consistency checks
     WeightedPolicyInfo newPolicyInfo = WeightedPolicyInfo.fromByteBuffer(
-        initializationContext.getSubClusterPolicyConfiguration().getParams());
+        initializationContext.getSubClusterPolicyConfiguration().getParams());      // 获取 WeightedPolicy 配置，检查参数是否改变
 
     // if nothing has changed skip the rest of initialization
     // and signal to childs that the reinit is free via isDirty var.

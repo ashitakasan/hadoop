@@ -82,7 +82,7 @@ import com.google.common.annotations.VisibleForTesting;
  * protocol they implement.
  */
 public class RouterRMAdminService extends AbstractService
-    implements ResourceManagerAdministrationProtocol {
+    implements ResourceManagerAdministrationProtocol {                              // 每个 router 上运行一个，用于拦截和检查客户端请求，只处理 amdin 请求
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterRMAdminService.class);
@@ -93,7 +93,7 @@ public class RouterRMAdminService extends AbstractService
   // For each user we store an interceptors' pipeline.
   // For performance issue we use LRU cache to keep in memory the newest ones
   // and remove the oldest used ones.
-  private Map<String, RequestInterceptorChainWrapper> userPipelineMap;
+  private Map<String, RequestInterceptorChainWrapper> userPipelineMap;              // 对于每个 admin 用户保存一个 拦截器链，使用 LRU 缓存
 
   public RouterRMAdminService() {
     super(RouterRMAdminService.class.getName());
@@ -114,7 +114,7 @@ public class RouterRMAdminService extends AbstractService
 
     int maxCacheSize =
         conf.getInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
-            YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);
+            YarnConfiguration.DEFAULT_ROUTER_PIPELINE_CACHE_MAX_SIZE);              // userPipelineMap 大小，如果用户不是很多（几百），可配置该参数为用户数量
     this.userPipelineMap = Collections.synchronizedMap(
         new LRUCacheHashMap<String, RequestInterceptorChainWrapper>(
             maxCacheSize, true));
@@ -126,7 +126,7 @@ public class RouterRMAdminService extends AbstractService
             YarnConfiguration.DEFAULT_RM_ADMIN_CLIENT_THREAD_COUNT);
 
     this.server = rpc.getServer(ResourceManagerAdministrationProtocol.class,
-        this, listenerEndpoint, serverConf, null, numWorkerThreads);
+        this, listenerEndpoint, serverConf, null, numWorkerThreads);                // 启动 RPC server，以接收 admin 请求
 
     this.server.start();
     LOG.info("Router RMAdminService listening on address: "
@@ -150,7 +150,7 @@ public class RouterRMAdminService extends AbstractService
    * @param conf
    * @return the intercepter class names as an instance of ArrayList
    */
-  private List<String> getInterceptorClassNames(Configuration conf) {
+  private List<String> getInterceptorClassNames(Configuration conf) {               // 获取拦截器链名，用于初始化
     String configuredInterceptorClassNames =
         conf.get(YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
             YarnConfiguration.DEFAULT_ROUTER_RMADMIN_INTERCEPTOR_CLASS);
@@ -211,7 +211,7 @@ public class RouterRMAdminService extends AbstractService
             current = interceptorInstance;
             continue;
           } else {
-            current.setNextInterceptor(interceptorInstance);
+            current.setNextInterceptor(interceptorInstance);                        // 构造所有的拦截器，生成有序的拦截器链
             current = interceptorInstance;
           }
         } else {
@@ -239,7 +239,7 @@ public class RouterRMAdminService extends AbstractService
    *
    * @param user
    */
-  private void initializePipeline(String user) {
+  private void initializePipeline(String user) {                                    // 初始化当前用户对应的拦截器
     RequestInterceptorChainWrapper chainWrapper = null;
     synchronized (this.userPipelineMap) {
       if (this.userPipelineMap.containsKey(user)) {
@@ -262,7 +262,7 @@ public class RouterRMAdminService extends AbstractService
       RMAdminRequestInterceptor interceptorChain =
           this.createRequestInterceptorChain();
       interceptorChain.init(user);
-      chainWrapper.init(interceptorChain);
+      chainWrapper.init(interceptorChain);                                          // 构造新的拦截器链，通过 wrapper 包装
     } catch (Exception e) {
       synchronized (this.userPipelineMap) {
         this.userPipelineMap.remove(user);
@@ -307,7 +307,7 @@ public class RouterRMAdminService extends AbstractService
   }
 
   @Override
-  public String[] getGroupsForUser(String user) throws IOException {
+  public String[] getGroupsForUser(String user) throws IOException {                // 执行 admin 请求，通过具体的拦截器执行请求转发
     RequestInterceptorChainWrapper pipeline = getInterceptorChain();
     return pipeline.getRootInterceptor().getGroupsForUser(user);
   }

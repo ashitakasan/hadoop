@@ -98,7 +98,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   @Override
   public SubClusterRegisterResponse registerSubCluster(
-      SubClusterRegisterRequest request) throws YarnException {
+      SubClusterRegisterRequest request) throws YarnException {                     // Router 的 RPC server 方法实现，构造其内部关于 RM 的视图
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterInfo subClusterInfo = request.getSubClusterInfo();
 

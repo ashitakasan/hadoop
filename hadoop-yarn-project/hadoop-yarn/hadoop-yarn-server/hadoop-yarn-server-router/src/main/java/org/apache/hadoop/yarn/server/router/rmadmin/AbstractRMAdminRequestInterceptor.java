@@ -83,7 +83,7 @@ public abstract class AbstractRMAdminRequestInterceptor
    * Gets the next {@link RMAdminRequestInterceptor} in the chain.
    */
   @Override
-  public RMAdminRequestInterceptor getNextInterceptor() {
+  public RMAdminRequestInterceptor getNextInterceptor() {                           // 调用拦截器链的下一个拦截器，系统默认没有调用
     return this.nextInterceptor;
   }
 

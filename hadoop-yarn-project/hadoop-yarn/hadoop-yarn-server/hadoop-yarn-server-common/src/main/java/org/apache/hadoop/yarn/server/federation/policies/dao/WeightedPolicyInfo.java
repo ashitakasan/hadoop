@@ -59,8 +59,8 @@ public class WeightedPolicyInfo {
   private static final Logger LOG =
       LoggerFactory.getLogger(WeightedPolicyInfo.class);
   private static JSONJAXBContext jsonjaxbContext = initContext();
-  private Map<SubClusterIdInfo, Float> routerPolicyWeights = new HashMap<>();
-  private Map<SubClusterIdInfo, Float> amrmPolicyWeights = new HashMap<>();
+  private Map<SubClusterIdInfo, Float> routerPolicyWeights = new HashMap<>();       // 子集群 <-> 路由策略权重
+  private Map<SubClusterIdInfo, Float> amrmPolicyWeights = new HashMap<>();         // 子集群 <-> 资源分配权重
   private float headroomAlpha;
 
   public WeightedPolicyInfo() {
@@ -220,7 +220,7 @@ public class WeightedPolicyInfo {
    *
    * @return the value of headroomAlpha.
    */
-  public float getHeadroomAlpha() {
+  public float getHeadroomAlpha() {                                                 // headroom 接近 1 表明主要考虑子集群剩余资源，接近 0 表明主要考虑子集群权重
     return headroomAlpha;
   }
 

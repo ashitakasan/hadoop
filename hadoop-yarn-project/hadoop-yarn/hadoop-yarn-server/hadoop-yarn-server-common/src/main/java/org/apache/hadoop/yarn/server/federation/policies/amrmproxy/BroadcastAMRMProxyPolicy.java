@@ -55,7 +55,7 @@ public class BroadcastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
 
   @Override
   public Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
-      List<ResourceRequest> resourceRequests) throws YarnException {
+      List<ResourceRequest> resourceRequests) throws YarnException {                // 将资源请求转发到所有的 RM 上
 
     Map<SubClusterId, SubClusterInfo> activeSubclusters =
         getActiveSubclusters();

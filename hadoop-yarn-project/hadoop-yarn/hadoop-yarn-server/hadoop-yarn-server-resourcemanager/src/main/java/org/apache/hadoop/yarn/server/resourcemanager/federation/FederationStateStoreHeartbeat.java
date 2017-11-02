@@ -58,7 +58,7 @@ public class FederationStateStoreHeartbeat implements Runnable {
   private String capability;
 
   public FederationStateStoreHeartbeat(SubClusterId subClusterId,
-      FederationStateStore stateStoreClient, ResourceScheduler scheduler) {
+      FederationStateStore stateStoreClient, ResourceScheduler scheduler) {         // ResourceScheduler 可以获取集群资源使用情况
     this.stateStoreService = stateStoreClient;
     this.subClusterId = subClusterId;
     this.rs = scheduler;
@@ -98,7 +98,7 @@ public class FederationStateStoreHeartbeat implements Runnable {
     try {
       updateClusterState();
       SubClusterHeartbeatRequest request = SubClusterHeartbeatRequest
-          .newInstance(subClusterId, SubClusterState.SC_RUNNING, capability);
+          .newInstance(subClusterId, SubClusterState.SC_RUNNING, capability);       // 每次心跳前，更新当前集群容量到 capability 中并汇报给 Router
       stateStoreService.subClusterHeartbeat(request);
       LOG.debug("Sending the heartbeat with capability: {}", capability);
     } catch (Exception e) {

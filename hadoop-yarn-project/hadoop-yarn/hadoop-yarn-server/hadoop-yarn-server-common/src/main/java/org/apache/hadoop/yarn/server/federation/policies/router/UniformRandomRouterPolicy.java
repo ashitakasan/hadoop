@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
  * of the "weights", in which case the {@link UniformRandomRouterPolicy} send
  * load to them, while {@code WeightedRandomRouterPolicy} does not.
  */
-public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
+public class UniformRandomRouterPolicy extends AbstractRouterPolicy {               // 该策略均匀随机的从各个 active 的子集群中选择集群
 
   private Random rand;
 
@@ -56,7 +56,7 @@ public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
 
     // note: this overrides AbstractRouterPolicy and ignores the weights
 
-    setPolicyContext(policyContext);
+    setPolicyContext(policyContext);                                                // 重写 AbstractRouterPolicy，忽略 weights
   }
 
   /**
@@ -77,7 +77,7 @@ public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
   @Override
   public SubClusterId getHomeSubcluster(
       ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blackListSubClusters) throws YarnException {
+      List<SubClusterId> blackListSubClusters) throws YarnException {               // 随机选择一个 active 的集群启动 AM
 
     // null checks and default-queue behavior
     validate(appSubmissionContext);

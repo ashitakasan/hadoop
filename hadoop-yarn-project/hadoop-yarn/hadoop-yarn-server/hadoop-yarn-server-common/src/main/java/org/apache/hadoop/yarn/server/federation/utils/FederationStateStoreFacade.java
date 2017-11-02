@@ -90,11 +90,11 @@ public final class FederationStateStoreFacade {
   private static final FederationStateStoreFacade FACADE =
       new FederationStateStoreFacade();
 
-  private FederationStateStore stateStore;
+  private FederationStateStore stateStore;                                          // FD 内数据结构存储，目前支持 InMemory、ZK、DB
   private int cacheTimeToLive;
   private Configuration conf;
-  private Cache<Object, Object> cache;
-  private SubClusterResolver subclusterResolver;
+  private Cache<Object, Object> cache;                                              // key: CacheRequest, value: Map
+  private SubClusterResolver subclusterResolver;                                    // 子 cluster 解析器
 
   private FederationStateStoreFacade() {
     initializeFacadeInternal(new Configuration());
@@ -106,13 +106,13 @@ public final class FederationStateStoreFacade {
       this.stateStore = (FederationStateStore) createRetryInstance(this.conf,
           YarnConfiguration.FEDERATION_STATESTORE_CLIENT_CLASS,
           YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS,
-          FederationStateStore.class, createRetryPolicy(conf));
+          FederationStateStore.class, createRetryPolicy(conf));                     // 构造 FS 数据储存在 InMemory
       this.stateStore.init(conf);
 
       this.subclusterResolver = createInstance(conf,
           YarnConfiguration.FEDERATION_CLUSTER_RESOLVER_CLASS,
           YarnConfiguration.DEFAULT_FEDERATION_CLUSTER_RESOLVER_CLASS,
-          SubClusterResolver.class);
+          SubClusterResolver.class);                                                // 加载所有 节点<->RM、节点<->机架 之间的关系
       this.subclusterResolver.load();
 
       initCache();
@@ -153,10 +153,10 @@ public final class FederationStateStoreFacade {
    */
   public static RetryPolicy createRetryPolicy(Configuration conf) {
     // Retry settings for StateStore
-    RetryPolicy basePolicy = RetryPolicies.exponentialBackoffRetry(
-        conf.getInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, Integer.SIZE),
+    RetryPolicy basePolicy = RetryPolicies.exponentialBackoffRetry(                 // 指数时间间隔的重试策略
+        conf.getInt(YarnConfiguration.CLIENT_FAILOVER_RETRIES, Integer.SIZE),       // client 失败重试次数
         conf.getLong(YarnConfiguration.CLIENT_FAILOVER_SLEEPTIME_BASE_MS,
-            YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS),
+            YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS),   // 重新连接 RM 的时间间隔
         TimeUnit.MILLISECONDS);
     Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
         new HashMap<Class<? extends Exception>, RetryPolicy>();
@@ -166,7 +166,7 @@ public final class FederationStateStoreFacade {
     exceptionToPolicyMap.put(PoolInitializationException.class, basePolicy);
 
     RetryPolicy retryPolicy = RetryPolicies.retryByException(
-        RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
+        RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);                    // 默认重试策略是 TRY_ONCE_THEN_FAIL，其他异常则用 basePolicy 重试策略
     return retryPolicy;
   }
 
@@ -183,7 +183,7 @@ public final class FederationStateStoreFacade {
     if (isCachingEnabled()) {
       CachingProvider jcacheProvider = Caching.getCachingProvider();
       CacheManager jcacheManager = jcacheProvider.getCacheManager();
-      this.cache = jcacheManager.getCache(this.getClass().getSimpleName());
+      this.cache = jcacheManager.getCache(this.getClass().getSimpleName());         // 配置并初始化缓存
       if (this.cache == null) {
         LOG.info("Creating a JCache Manager with name "
             + this.getClass().getSimpleName());
@@ -231,7 +231,7 @@ public final class FederationStateStoreFacade {
   public SubClusterInfo getSubCluster(final SubClusterId subClusterId)
       throws YarnException {
     if (isCachingEnabled()) {
-      return getSubClusters(false).get(subClusterId);
+      return getSubClusters(false).get(subClusterId);                               // 这里只是获取集群信息，不需要过滤不活跃的 cluster
     } else {
       GetSubClusterInfoResponse response = stateStore
           .getSubCluster(GetSubClusterInfoRequest.newInstance(subClusterId));
@@ -276,7 +276,7 @@ public final class FederationStateStoreFacade {
     try {
       if (isCachingEnabled()) {
         return (Map<SubClusterId, SubClusterInfo>) cache
-            .get(buildGetSubClustersCacheRequest(filterInactiveSubClusters));
+            .get(buildGetSubClustersCacheRequest(filterInactiveSubClusters));       // 从缓存中加载 SubClustersRequest 的请求解析结果
       } else {
         return buildSubClusterInfoMap(stateStore.getSubClusters(
             GetSubClustersInfoRequest.newInstance(filterInactiveSubClusters)));
@@ -297,7 +297,7 @@ public final class FederationStateStoreFacade {
   public SubClusterPolicyConfiguration getPolicyConfiguration(
       final String queue) throws YarnException {
     if (isCachingEnabled()) {
-      return getPoliciesConfigurations().get(queue);
+      return getPoliciesConfigurations().get(queue);                                // 从缓存中加载某个 queue 的 PolicyConfig
     } else {
 
       GetSubClusterPolicyConfigurationResponse response =
@@ -325,7 +325,7 @@ public final class FederationStateStoreFacade {
     try {
       if (isCachingEnabled()) {
         return (Map<String, SubClusterPolicyConfiguration>) cache
-            .get(buildGetPoliciesConfigurationsCacheRequest());
+            .get(buildGetPoliciesConfigurationsCacheRequest());                     // 获取所有的 queues 的 PolicyConfig
       } else {
         return buildPolicyConfigMap(stateStore.getPoliciesConfigurations(
             GetSubClusterPoliciesConfigurationsRequest.newInstance()));
@@ -347,7 +347,7 @@ public final class FederationStateStoreFacade {
       ApplicationHomeSubCluster appHomeSubCluster) throws YarnException {
     AddApplicationHomeSubClusterResponse response =
         stateStore.addApplicationHomeSubCluster(
-            AddApplicationHomeSubClusterRequest.newInstance(appHomeSubCluster));
+            AddApplicationHomeSubClusterRequest.newInstance(appHomeSubCluster));    // 在 store 中储存 appid 对应的 subCluster (home cluster)
     return response.getHomeSubCluster();
   }
 
@@ -362,7 +362,7 @@ public final class FederationStateStoreFacade {
   public void updateApplicationHomeSubCluster(
       ApplicationHomeSubCluster appHomeSubCluster) throws YarnException {
     stateStore.updateApplicationHomeSubCluster(
-        UpdateApplicationHomeSubClusterRequest.newInstance(appHomeSubCluster));
+        UpdateApplicationHomeSubClusterRequest.newInstance(appHomeSubCluster));     // 在 store 中更新 appid 对应的 subCluster (home cluster)
     return;
   }
 
@@ -379,7 +379,7 @@ public final class FederationStateStoreFacade {
     GetApplicationHomeSubClusterResponse response =
         stateStore.getApplicationHomeSubCluster(
             GetApplicationHomeSubClusterRequest.newInstance(appId));
-    return response.getApplicationHomeSubCluster().getHomeSubCluster();
+    return response.getApplicationHomeSubCluster().getHomeSubCluster();             // 在 store 中获取 appid 对应的 subCluster (home cluster)
   }
 
   /**
@@ -442,7 +442,7 @@ public final class FederationStateStoreFacade {
   }
 
   private Map<SubClusterId, SubClusterInfo> buildSubClusterInfoMap(
-      final GetSubClustersInfoResponse response) {
+      final GetSubClustersInfoResponse response) {                                  // 从 response 中解析出 sucClusterId 与 subCluster 对应关系
     List<SubClusterInfo> subClusters = response.getSubClusters();
     Map<SubClusterId, SubClusterInfo> subClustersMap =
         new HashMap<>(subClusters.size());
@@ -455,16 +455,16 @@ public final class FederationStateStoreFacade {
   private Object buildGetSubClustersCacheRequest(
       final boolean filterInactiveSubClusters) {
     final String cacheKey = buildCacheKey(getClass().getSimpleName(),
-        GET_SUBCLUSTERS_CACHEID, null);
+        GET_SUBCLUSTERS_CACHEID, null);                                             // cacheKey 即作为缓存 key - CacheRequest 的 key，它是唯一的
     CacheRequest<String, Map<SubClusterId, SubClusterInfo>> cacheRequest =
         new CacheRequest<String, Map<SubClusterId, SubClusterInfo>>(cacheKey,
-            new Func<String, Map<SubClusterId, SubClusterInfo>>() {
+            new Func<String, Map<SubClusterId, SubClusterInfo>>() {                 // 该 CacheRequest.Func 的作用是返回 SubClustersInfoResponse 解析结果
               @Override
               public Map<SubClusterId, SubClusterInfo> invoke(String key)
                   throws Exception {
                 GetSubClustersInfoResponse subClusters =
                     stateStore.getSubClusters(GetSubClustersInfoRequest
-                        .newInstance(filterInactiveSubClusters));
+                        .newInstance(filterInactiveSubClusters));                   // 从 store 中获取 SubClusters，store 内部发送 rpc 请求
                 return buildSubClusterInfoMap(subClusters);
               }
             });
@@ -472,7 +472,7 @@ public final class FederationStateStoreFacade {
   }
 
   private Map<String, SubClusterPolicyConfiguration> buildPolicyConfigMap(
-      GetSubClusterPoliciesConfigurationsResponse response) {
+      GetSubClusterPoliciesConfigurationsResponse response) {                       // 解析 PoliciesConfigurationsResponse，返回 queue <-> PolicyConfig
     List<SubClusterPolicyConfiguration> policyConfigs =
         response.getPoliciesConfigs();
     Map<String, SubClusterPolicyConfiguration> queuePolicyConfigs =
@@ -485,7 +485,7 @@ public final class FederationStateStoreFacade {
 
   private Object buildGetPoliciesConfigurationsCacheRequest() {
     final String cacheKey = buildCacheKey(getClass().getSimpleName(),
-        GET_POLICIES_CONFIGURATIONS_CACHEID, null);
+        GET_POLICIES_CONFIGURATIONS_CACHEID, null);                                 // cacheKey 即作为缓存 key - CacheRequest 的 key，它是唯一的
     CacheRequest<String, Map<String, SubClusterPolicyConfiguration>> cacheRequest =
         new CacheRequest<String, Map<String, SubClusterPolicyConfiguration>>(
             cacheKey,
@@ -496,7 +496,7 @@ public final class FederationStateStoreFacade {
                 GetSubClusterPoliciesConfigurationsResponse policyConfigs =
                     stateStore.getPoliciesConfigurations(
                         GetSubClusterPoliciesConfigurationsRequest
-                            .newInstance());
+                            .newInstance());                                        // 从 store 中获取 PoliciesConfig，store 内部获取
                 return buildPolicyConfigMap(policyConfigs);
               }
             });
@@ -512,7 +512,7 @@ public final class FederationStateStoreFacade {
       buffer.append("::");
       buffer.append(argName);
     }
-    return buffer.toString();
+    return buffer.toString();                                                       // cache 固定格式：className.methodName::argName
   }
 
   /**
@@ -569,7 +569,7 @@ public final class FederationStateStoreFacade {
 
     @SuppressWarnings("unchecked")
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(Object obj) {                                             // 只计算 key，即认为 key 相同的 CacheRequest 都相等
       if (this == obj) {
         return true;
       }
@@ -597,6 +597,6 @@ public final class FederationStateStoreFacade {
    * type specified by the TResult parameter.
    */
   protected interface Func<T, TResult> {
-    TResult invoke(T input) throws Exception;
+    TResult invoke(T input) throws Exception;                                       // T 其实没有用，仅仅需要使用 invoke 方法，返回 TResult
   }
 }
