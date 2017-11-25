@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.server.federation.policies.router.RejectRouterPoli
  * is to be used to prevent applications in a specific queue (or if used as
  * default for non-configured queues) from accessing cluster resources.
  */
-public class RejectAllPolicyManager extends AbstractPolicyManager {
+public class RejectAllPolicyManager extends AbstractPolicyManager {                 // 拒绝所有请求，主要用于禁止某个队列提交作业、发起资源请求
 
   public RejectAllPolicyManager() {
     // this structurally hard-codes two compatible policies for Router and

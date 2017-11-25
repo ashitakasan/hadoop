@@ -96,9 +96,9 @@ public final class FederationProxyProviderUtil {
       final Class<T> protocol, SubClusterId subClusterId,
       UserGroupInformation user, Token<? extends TokenIdentifier> token)
       throws IOException {
-    final YarnConfiguration config = new YarnConfiguration(configuration);
+    final YarnConfiguration config = new YarnConfiguration(configuration);          // 每个 cluster 都对应一个 configuration
     updateConfForFederation(config, subClusterId.getId());
-    return AMRMClientUtils.createRMProxy(config, protocol, user, token);
+    return AMRMClientUtils.createRMProxy(config, protocol, user, token);            // 为 user 创建 RM 代理
   }
 
   /**
@@ -123,7 +123,7 @@ public final class FederationProxyProviderUtil {
      */
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
     conf.setClass(YarnConfiguration.CLIENT_FAILOVER_PROXY_PROVIDER,
-        FederationRMFailoverProxyProvider.class, RMFailoverProxyProvider.class);
+        FederationRMFailoverProxyProvider.class, RMFailoverProxyProvider.class);    // 配置 FD failover 和 RM failover
     if (HAUtil.isHAEnabled(conf)) {
       conf.setBoolean(YarnConfiguration.FEDERATION_FAILOVER_ENABLED, true);
       conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, false);

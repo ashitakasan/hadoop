@@ -49,12 +49,12 @@ public class RouterPolicyFacade {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterPolicyFacade.class);
 
-  private final SubClusterResolver subClusterResolver;
-  private final FederationStateStoreFacade federationFacade;
-  private Map<String, SubClusterPolicyConfiguration> globalConfMap;
+  private final SubClusterResolver subClusterResolver;                              // 子 cluster 解析器
+  private final FederationStateStoreFacade federationFacade;                        // FD store，保存一些元数据
+  private Map<String, SubClusterPolicyConfiguration> globalConfMap;                 // 队列配置 queue <-> 子集群配置，配置中指定了 FederationPolicyManager
 
   @VisibleForTesting
-  Map<String, FederationRouterPolicy> globalPolicyMap;
+  Map<String, FederationRouterPolicy> globalPolicyMap;                              // 全局路由策略 queue <-> 路由策略，从 FederationPolicyManager 中获取
 
   public RouterPolicyFacade(Configuration conf,
       FederationStateStoreFacade facade, SubClusterResolver resolver,
@@ -70,7 +70,7 @@ public class RouterPolicyFacade {
     String defaultKey = YarnConfiguration.DEFAULT_FEDERATION_POLICY_KEY;
     SubClusterPolicyConfiguration configuration = null;
     try {
-      configuration = federationFacade.getPolicyConfiguration(defaultKey);
+      configuration = federationFacade.getPolicyConfiguration(defaultKey);          // 默认队列策略配置即名为 * 的队列的配置
     } catch (YarnException e) {
       LOG.warn("No fallback behavior defined in store, defaulting to XML "
           + "configuration fallback behavior.");
@@ -80,7 +80,7 @@ public class RouterPolicyFacade {
     if (configuration == null) {
       String defaultFederationPolicyManager =
           conf.get(YarnConfiguration.FEDERATION_POLICY_MANAGER,
-              YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER);
+              YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER);                 // 这里只加载默认的策略管理器
       String defaultPolicyParamString =
           conf.get(YarnConfiguration.FEDERATION_POLICY_MANAGER_PARAMS,
               YarnConfiguration.DEFAULT_FEDERATION_POLICY_MANAGER_PARAMS);
@@ -96,14 +96,14 @@ public class RouterPolicyFacade {
         new FederationPolicyInitializationContext(configuration,
             subClusterResolver, federationFacade, homeSubcluster);
     FederationPolicyManager fallbackPolicyManager =
-        FederationPolicyUtils.instantiatePolicyManager(configuration.getType());
+        FederationPolicyUtils.instantiatePolicyManager(configuration.getType());    // 初始化失败时的子集群策略 并配置默认 queue (即 *)
     fallbackPolicyManager.setQueue(defaultKey);
 
     // add to the cache the fallback behavior
     globalConfMap.put(defaultKey,
         fallbackContext.getSubClusterPolicyConfiguration());
     globalPolicyMap.put(defaultKey,
-        fallbackPolicyManager.getRouterPolicy(fallbackContext, null));
+        fallbackPolicyManager.getRouterPolicy(fallbackContext, null));              // 仅仅缓存默认（失败）cluster 子集群策略和路由策略
 
   }
 
@@ -131,7 +131,7 @@ public class RouterPolicyFacade {
     // the maps are concurrent, but we need to protect from reset()
     // reinitialization mid-execution by creating a new reference local to this
     // method.
-    Map<String, SubClusterPolicyConfiguration> cachedConfs = globalConfMap;
+    Map<String, SubClusterPolicyConfiguration> cachedConfs = globalConfMap;         // 获取 globalMap 的引用，防止 reset 方法清除这两个 map
     Map<String, FederationRouterPolicy> policyMap = globalPolicyMap;
 
     if (appSubmissionContext == null) {
@@ -152,7 +152,7 @@ public class RouterPolicyFacade {
     SubClusterPolicyConfiguration configuration = null;
 
     try {
-      configuration = federationFacade.getPolicyConfiguration(queue);
+      configuration = federationFacade.getPolicyConfiguration(queue);               // 从 FD store 中获取指定 queue 的子集群策略，目前只实现了默认队列的策略
     } catch (YarnException e) {
       String errMsg = "There is no policy configured for the queue: " + queue
           + ", falling back to defaults.";
@@ -167,9 +167,9 @@ public class RouterPolicyFacade {
           + " fallback to default policy for: "
           + YarnConfiguration.DEFAULT_FEDERATION_POLICY_KEY);
 
-      queue = YarnConfiguration.DEFAULT_FEDERATION_POLICY_KEY;
+      queue = YarnConfiguration.DEFAULT_FEDERATION_POLICY_KEY;                      // 如果未配置 queue 的子集群策略，较好的方式是从 XML 中加载
       try {
-        configuration = federationFacade.getPolicyConfiguration(queue);
+        configuration = federationFacade.getPolicyConfiguration(queue);             // 如果未配置 queue 的子集群策略，则取默认的策略配置
       } catch (YarnException e) {
         String errMsg = "Cannot retrieve policy configured for the queue: "
             + queue + ", falling back to defaults.";
@@ -182,14 +182,14 @@ public class RouterPolicyFacade {
     // previously loaded configuration.
     if (configuration == null) {
       configuration =
-          cachedConfs.get(YarnConfiguration.DEFAULT_FEDERATION_POLICY_KEY);
+          cachedConfs.get(YarnConfiguration.DEFAULT_FEDERATION_POLICY_KEY);         // 默认（失败）的子集群策略并没有存放在 fd store 中
     }
 
     // if the configuration has changed since last loaded, reinit the policy
     // based on current configuration
     if (!cachedConfs.containsKey(queue)
-        || !cachedConfs.get(queue).equals(configuration)) {
-      singlePolicyReinit(policyMap, cachedConfs, queue, configuration);
+        || !cachedConfs.get(queue).equals(configuration)) {                         // config 从 fd store 中获取，如果子集群策略改变，则重新初始化 queue 策略
+      singlePolicyReinit(policyMap, cachedConfs, queue, configuration);             // 这里仅初始化并设置 queue 信息，是否应该考虑到 reset() ?
     }
 
     FederationRouterPolicy policy = policyMap.get(queue);
@@ -201,7 +201,7 @@ public class RouterPolicyFacade {
           + "and no default specified.");
     }
 
-    return policy.getHomeSubcluster(appSubmissionContext, blackListSubClusters);
+    return policy.getHomeSubcluster(appSubmissionContext, blackListSubClusters);    // 从 queue 对应的路由策略中获取 cluster 信息
   }
 
   /**
@@ -215,13 +215,13 @@ public class RouterPolicyFacade {
   private void singlePolicyReinit(Map<String, FederationRouterPolicy> policyMap,
       Map<String, SubClusterPolicyConfiguration> cachedConfs, String queue,
       SubClusterPolicyConfiguration conf)
-      throws FederationPolicyInitializationException {
+      throws FederationPolicyInitializationException {                              // 重新初始化子集群策略和路由策略，并只设置 queue 的信息
 
     FederationPolicyInitializationContext context =
         new FederationPolicyInitializationContext(conf, subClusterResolver,
             federationFacade, null);
-    String newType = context.getSubClusterPolicyConfiguration().getType();
-    FederationRouterPolicy routerPolicy = policyMap.get(queue);
+    String newType = context.getSubClusterPolicyConfiguration().getType();          // type 即 FederationPolicyManager 实现类的名称
+    FederationRouterPolicy routerPolicy = policyMap.get(queue);                     // 获取旧的策略信息，更新成新的策略
 
     FederationPolicyManager federationPolicyManager =
         FederationPolicyUtils.instantiatePolicyManager(newType);
@@ -244,7 +244,7 @@ public class RouterPolicyFacade {
    * invoked if the facade remains activity after very large churn of queues in
    * the system.
    */
-  public synchronized void reset() {
+  public synchronized void reset() {                                                // 重置所有的子集群策略和路由策略，只保留默认的配置和路由策略
 
     // remember the fallBack
     SubClusterPolicyConfiguration conf =

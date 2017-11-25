@@ -86,7 +86,7 @@ public class DefaultSubClusterResolverImpl extends AbstractSubClusterResolver
   @Override
   public void load() {
     String fileName =
-        this.conf.get(YarnConfiguration.FEDERATION_MACHINE_LIST, "");
+        this.conf.get(YarnConfiguration.FEDERATION_MACHINE_LIST, "");               // 该文件保存了所有 节点<->子集群、节点<->机架 之间的映射关系
 
     try {
       if (fileName == null || fileName.trim().length() == 0) {
@@ -109,7 +109,7 @@ public class DefaultSubClusterResolverImpl extends AbstractSubClusterResolver
       try {
         reader = Files.newBufferedReader(file, Charset.defaultCharset());
         String line = null;
-        while ((line = reader.readLine()) != null) {
+        while ((line = reader.readLine()) != null) {                                // 该文件每行有三个字段：节点名、节点子Cluster、节点机架
           String[] tokens = line.split(",");
           if (tokens.length == 3) {
 

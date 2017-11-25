@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
  * An utility that helps to determine the sub-cluster that a specified node or
  * rack belongs to. All implementing classes should be thread-safe.
  */
-public interface SubClusterResolver extends Configurable {
+public interface SubClusterResolver extends Configurable {                          // 查询某个子节点从属于哪个子集群的工具类
 
   /**
    * Obtain the sub-cluster that a specified node belongs to.

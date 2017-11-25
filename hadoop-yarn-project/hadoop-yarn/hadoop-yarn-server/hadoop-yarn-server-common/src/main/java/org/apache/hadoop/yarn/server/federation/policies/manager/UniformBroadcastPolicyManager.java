@@ -38,7 +38,7 @@ public class UniformBroadcastPolicyManager extends AbstractPolicyManager {
     // this structurally hard-codes two compatible policies for Router and
     // AMRMProxy.
     routerFederationPolicy = UniformRandomRouterPolicy.class;
-    amrmProxyFederationPolicy = BroadcastAMRMProxyPolicy.class;
+    amrmProxyFederationPolicy = BroadcastAMRMProxyPolicy.class;                     // 随机选择子集群，广播资源请求到所有子集群
   }
 
 }

@@ -32,7 +32,7 @@ public class HashBroadcastPolicyManager extends AbstractPolicyManager {
     // this structurally hard-codes two compatible policies for Router and
     // AMRMProxy.
     routerFederationPolicy = HashBasedRouterPolicy.class;
-    amrmProxyFederationPolicy = BroadcastAMRMProxyPolicy.class;
+    amrmProxyFederationPolicy = BroadcastAMRMProxyPolicy.class;                     // Hash 策略只能保证同一队列的 AM 在一个子集群，不能保证 task 在同一子集群
   }
 
 }

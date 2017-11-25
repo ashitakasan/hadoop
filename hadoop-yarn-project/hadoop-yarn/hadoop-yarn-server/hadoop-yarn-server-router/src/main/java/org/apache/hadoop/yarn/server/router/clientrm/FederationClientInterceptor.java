@@ -134,11 +134,11 @@ public class FederationClientInterceptor
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationClientInterceptor.class);
 
-  private int numSubmitRetries;
-  private Map<SubClusterId, ApplicationClientProtocol> clientRMProxies;
-  private FederationStateStoreFacade federationFacade;
+  private int numSubmitRetries;                                                     // 提交作业重试次数，可向多个 cluster 提交作业
+  private Map<SubClusterId, ApplicationClientProtocol> clientRMProxies;             // 每个 cluster 都有一个 clientRMProxy
+  private FederationStateStoreFacade federationFacade;                              // FD store 实现
   private Random rand;
-  private RouterPolicyFacade policyFacade;
+  private RouterPolicyFacade policyFacade;                                          // 路由策略
   private RouterMetrics routerMetrics;
   private final Clock clock = new MonotonicClock();
 
@@ -168,7 +168,7 @@ public class FederationClientInterceptor
   }
 
   @Override
-  public void setNextInterceptor(ClientRequestInterceptor next) {
+  public void setNextInterceptor(ClientRequestInterceptor next) {                   // 不应该在 FD 拦截器上调用这个方法
     throw new YarnRuntimeException("setNextInterceptor is being called on "
         + "FederationClientRequestInterceptor, which should be the last one "
         + "in the chain. Check if the interceptor pipeline configuration "
@@ -179,14 +179,14 @@ public class FederationClientInterceptor
   protected ApplicationClientProtocol getClientRMProxyForSubCluster(
       SubClusterId subClusterId) throws YarnException {
 
-    if (clientRMProxies.containsKey(subClusterId)) {
+    if (clientRMProxies.containsKey(subClusterId)) {                                // 选取 clusterId 对应的 RMProxy，proxy 内部会向对应的 RM 发请求
       return clientRMProxies.get(subClusterId);
     }
 
     ApplicationClientProtocol clientRMProxy = null;
     try {
       clientRMProxy = FederationProxyProviderUtil.createRMProxy(getConf(),
-          ApplicationClientProtocol.class, subClusterId, user);
+          ApplicationClientProtocol.class, subClusterId, user);                     // 为 user 创建 subCluster 的 RM 代理，并储存
     } catch (Exception e) {
       RouterServerUtil.logAndThrowException(
           "Unable to create the interface to reach the SubCluster "
@@ -208,7 +208,7 @@ public class FederationClientInterceptor
     }
     List<SubClusterId> list = new ArrayList<>(activeSubclusters.keySet());
 
-    return list.get(rand.nextInt(list.size()));
+    return list.get(rand.nextInt(list.size()));                                     // 从所有 active 的 cluster 中随机选取一个
   }
 
   /**
@@ -218,26 +218,26 @@ public class FederationClientInterceptor
    * to submit the request on #numSubmitRetries different SubClusters. The
    * SubClusters are randomly chosen from the active ones.
    *
-   * Possible failures and behaviors:
+   * Possible failures and behaviors:                                               // 故障及行为：client 故障无影响，Router 故障 client 会超时并重试
    *
    * Client: identical behavior as {@code ClientRMService}.
    *
    * Router: the Client will timeout and resubmit.
    *
-   * ResourceManager: the Router will timeout and contacts another RM.
+   * ResourceManager: the Router will timeout and contacts another RM.              // RM 故障则 Router 会超时并连接其他的 RM
    *
    * StateStore: not in the execution.
    */
   @Override
   public GetNewApplicationResponse getNewApplication(
-      GetNewApplicationRequest request) throws YarnException, IOException {
+      GetNewApplicationRequest request) throws YarnException, IOException {         // new app 请求会发送到任意一个 sub cluster 上
 
     long startTime = clock.getTime();
 
     Map<SubClusterId, SubClusterInfo> subClustersActive =
         federationFacade.getSubClusters(true);
 
-    for (int i = 0; i < numSubmitRetries; ++i) {
+    for (int i = 0; i < numSubmitRetries; ++i) {                                    // 重试次数中的每次选取 RM 都是随机的
       SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive);
       LOG.debug(
           "getNewApplication try #" + i + " on SubCluster " + subClusterId);
@@ -259,7 +259,7 @@ public class FederationClientInterceptor
       } else {
         // Empty response from the ResourceManager.
         // Blacklist this subcluster for this request.
-        subClustersActive.remove(subClusterId);
+        subClustersActive.remove(subClusterId);                                     // 如果 new app 失败，则将 sub cluster 加入黑名单
       }
 
     }
@@ -273,21 +273,21 @@ public class FederationClientInterceptor
   /**
    * Today, in YARN there are no checks of any applicationId submitted.
    *
-   * Base scenarios:
+   * Base scenarios:                                                                // 基本情形：
    *
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into
-   * StateStore with the selected SubCluster (e.g. SC1) and the appId. • The
-   * State Store replies with the selected SubCluster (e.g. SC1). • The Router
-   * submits the request to the selected SubCluster.
+   * The Client submits an application to the Router. • The Router selects one      //    1. client 提交一个 app 到 Router
+   * SubCluster to forward the request. • The Router inserts a tuple into           //    2. Router 选择一个 cluster 转发请求
+   * StateStore with the selected SubCluster (e.g. SC1) and the appId. • The        //    3. Router 将 appid <-> cluster 映射信息保存到 store 中
+   * State Store replies with the selected SubCluster (e.g. SC1). • The Router      //    4. store 响应 cluster
+   * submits the request to the selected SubCluster.                                //    5. Router 提交请求到选择的 cluster
    *
-   * In case of State Store failure:
+   * In case of State Store failure:                                                // 如果 store 故障：
    *
-   * The client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • Due to the
-   * State Store down the Router times out and it will retry depending on the
-   * FederationFacade settings. • The Router replies to the client with an error
+   * The client submits an application to the Router. • The Router selects one      //    1. client 提交一个 app 到 Router
+   * SubCluster to forward the request. • The Router inserts a tuple into State     //    2. Router 选择一个 cluster 转发请求
+   * Store with the selected SubCluster (e.g. SC1) and the appId. • Due to the      //    3. Router 将 appid <-> cluster 映射信息保存到 store 中
+   * State Store down the Router times out and it will retry depending on the       //    4. 由于 store 故障，Router 会重试
+   * FederationFacade settings. • The Router replies to the client with an error    //    5. Router 响应 client 错误信息
    * message.
    *
    * If State Store fails after inserting the tuple: identical behavior as
@@ -295,49 +295,49 @@ public class FederationClientInterceptor
    *
    * In case of Router failure:
    *
-   * Scenario 1 – Crash before submission to the ResourceManager
+   * Scenario 1 – Crash before submission to the ResourceManager                    // 提交 app 到 RM 之前 Router 故障：
    *
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * crashes. • The Client timeouts and resubmits the application. • The Router
-   * selects one SubCluster to forward the request. • The Router inserts a tuple
-   * into State Store with the selected SubCluster (e.g. SC2) and the appId. •
-   * Because the tuple is already inserted in the State Store, it returns the
-   * previous selected SubCluster (e.g. SC1). • The Router submits the request
+   * The Client submits an application to the Router. • The Router selects one      //    1. client 提交一个 app 到 Router
+   * SubCluster to forward the request. • The Router inserts a tuple into State     //    2. Router 选择一个 cluster 转发请求
+   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router      //    3. Router 将 appid <-> cluster 映射信息保存到 store 中
+   * crashes. • The Client timeouts and resubmits the application. • The Router     //    4. Router 故障，client 超时并重新提交作业
+   * selects one SubCluster to forward the request. • The Router inserts a tuple    //    5. Router(new) 选择一个 cluster 转发请求
+   * into State Store with the selected SubCluster (e.g. SC2) and the appId. •      //    6. Router 将新的 appid <-> cluster 映射信息保存到 store 中
+   * Because the tuple is already inserted in the State Store, it returns the       //    7. 由于 store 已经有该 appid 信息，store 返回之前选择的 cluster
+   * previous selected SubCluster (e.g. SC1). • The Router submits the request      //    8. Router 提交请求到返回的 cluster 上
    * to the selected SubCluster (e.g. SC1).
    *
-   * Scenario 2 – Crash after submission to the ResourceManager
+   * Scenario 2 – Crash after submission to the ResourceManager                     // 提交 app 到 RM 之后 Router 故障
    *
-   * • The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * submits the request to the selected SubCluster. • The Router crashes. • The
-   * Client timeouts and resubmit the application. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC2) and the appId. • The State
-   * Store replies with the selected SubCluster (e.g. SC1). • The Router submits
-   * the request to the selected SubCluster (e.g. SC1). When a client re-submits
+   * • The Client submits an application to the Router. • The Router selects one    //    1. client 提交一个 app 到 Router
+   * SubCluster to forward the request. • The Router inserts a tuple into State     //    2. Router 选择一个 cluster 转发请求
+   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router      //    3. Router 将 appid <-> cluster 映射信息保存到 store 中
+   * submits the request to the selected SubCluster. • The Router crashes. • The    //    4. Router 提交请求到选择的 cluster 上
+   * Client timeouts and resubmit the application. • The Router selects one         //    5. Router 故障，client 超时并重新提交作业
+   * SubCluster to forward the request. • The Router inserts a tuple into State     //    6. Router 选择一个 cluster 转发请求
+   * Store with the selected SubCluster (e.g. SC2) and the appId. • The State       //    7. Router 将新的 appid <-> cluster 映射信息保存到 store 中
+   * Store replies with the selected SubCluster (e.g. SC1). • The Router submits    //    8. 由于 store 已经有该 appid 信息，store 返回之前选择的 cluster
+   * the request to the selected SubCluster (e.g. SC1). When a client re-submits    //    9. 如果 client 重新提交请求到相同的 RM，RM 不会异常并返回成功消息
    * the same application to the same RM, it does not raise an exception and
    * replies with operation successful message.
    *
    * In case of Client failure: identical behavior as {@code ClientRMService}.
    *
-   * In case of ResourceManager failure:
+   * In case of ResourceManager failure:                                            // 如果 RM 故障：
    *
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * submits the request to the selected SubCluster. • The entire SubCluster is
-   * down – all the RMs in HA or the master RM is not reachable. • The Router
-   * times out. • The Router selects a new SubCluster to forward the request. •
-   * The Router update a tuple into State Store with the selected SubCluster
-   * (e.g. SC2) and the appId. • The State Store replies with OK answer. • The
+   * The Client submits an application to the Router. • The Router selects one      //    1. client 提交一个 app 到 Router
+   * SubCluster to forward the request. • The Router inserts a tuple into State     //    2. Router 选择一个 cluster 转发请求（根据策略）
+   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router      //    3. Router 将 appid <-> cluster 映射信息保存到 store 中
+   * submits the request to the selected SubCluster. • The entire SubCluster is     //    4. Router 提交请求到选择的 cluster 上
+   * down – all the RMs in HA or the master RM is not reachable. • The Router       //    5. cluster RM 故障，并且 RM 的 HA 也故障
+   * times out. • The Router selects a new SubCluster to forward the request. •     //    6. Router 超时，Router 选择新的 cluster 转发请求
+   * The Router update a tuple into State Store with the selected SubCluster        //    7. Router 将新的 appid <-> cluster 映射信息保存到 store 中
+   * (e.g. SC2) and the appId. • The State Store replies with OK answer. • The      //    8. store 返回 OK，Router 提交请求到选择的 cluster 中
    * Router submits the request to the selected SubCluster (e.g. SC2).
    */
   @Override
   public SubmitApplicationResponse submitApplication(
-      SubmitApplicationRequest request) throws YarnException, IOException {
+      SubmitApplicationRequest request) throws YarnException, IOException {         // client 通过 Router 提交 app 到 RM
 
     long startTime = clock.getTime();
 
@@ -358,19 +358,19 @@ public class FederationClientInterceptor
     for (int i = 0; i < numSubmitRetries; ++i) {
 
       SubClusterId subClusterId = policyFacade.getHomeSubcluster(
-          request.getApplicationSubmissionContext(), blacklist);
+          request.getApplicationSubmissionContext(), blacklist);                    // 从 策略包装中获取提交请求对应的 cluster
       LOG.info("submitApplication appId" + applicationId + " try #" + i
           + " on SubCluster " + subClusterId);
 
       ApplicationHomeSubCluster appHomeSubCluster =
-          ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
+          ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);       // pb 消息内部包含 appid、clusterid
 
       if (i == 0) {
         try {
           // persist the mapping of applicationId and the subClusterId which has
           // been selected as its home
           subClusterId =
-              federationFacade.addApplicationHomeSubCluster(appHomeSubCluster);
+              federationFacade.addApplicationHomeSubCluster(appHomeSubCluster);     // 在 store 中储存 appid <-> clusterid 映射信息
         } catch (YarnException e) {
           routerMetrics.incrAppsFailedSubmitted();
           String message = "Unable to insert the ApplicationId " + applicationId
@@ -381,7 +381,7 @@ public class FederationClientInterceptor
         try {
           // update the mapping of applicationId and the home subClusterId to
           // the new subClusterId we have selected
-          federationFacade.updateApplicationHomeSubCluster(appHomeSubCluster);
+          federationFacade.updateApplicationHomeSubCluster(appHomeSubCluster);      // 如果是重试，则更新 store 中 appid <-> clusterid 映射信息
         } catch (YarnException e) {
           String message = "Unable to update the ApplicationId " + applicationId
               + " into the FederationStateStore";
@@ -398,7 +398,7 @@ public class FederationClientInterceptor
       }
 
       ApplicationClientProtocol clientRMProxy =
-          getClientRMProxyForSubCluster(subClusterId);
+          getClientRMProxyForSubCluster(subClusterId);                              // 获取指定 cluster 的代理，并开始提交 app
 
       SubmitApplicationResponse response = null;
       try {
@@ -418,11 +418,11 @@ public class FederationClientInterceptor
       } else {
         // Empty response from the ResourceManager.
         // Blacklist this subcluster for this request.
-        blacklist.add(subClusterId);
+        blacklist.add(subClusterId);                                                // 如果 RM 没有响应，则将其放入黑名单，该黑名单仅仅本次请求有效
       }
     }
 
-    routerMetrics.incrAppsFailedSubmitted();
+    routerMetrics.incrAppsFailedSubmitted();                                        // 达到重试次数后，此次作业提交失败
     String errMsg = "Application "
         + request.getApplicationSubmissionContext().getApplicationName()
         + " with appId " + applicationId + " failed to be submitted.";

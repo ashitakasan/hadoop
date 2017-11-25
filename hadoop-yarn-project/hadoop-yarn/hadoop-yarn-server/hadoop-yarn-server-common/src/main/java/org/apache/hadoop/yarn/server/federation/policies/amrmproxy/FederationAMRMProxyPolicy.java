@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
  * {@link ResourceRequest}s received by the AM among various RMs.
  */
 public interface FederationAMRMProxyPolicy
-    extends ConfigurableFederationPolicy {
+    extends ConfigurableFederationPolicy {                                          // 该接口提供了 AM 向多个 RM 请求资源的能力
 
   /**
    * Splits the {@link ResourceRequest}s from the client across one or more
@@ -47,7 +47,7 @@ public interface FederationAMRMProxyPolicy
    *           sub-clusters can be found.
    */
   Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
-      List<ResourceRequest> resourceRequests) throws YarnException;
+      List<ResourceRequest> resourceRequests) throws YarnException;                 // 将 AM 的资源请求分割成多个，转发到各个子集群
 
   /**
    * This method should be invoked to notify the policy about responses being

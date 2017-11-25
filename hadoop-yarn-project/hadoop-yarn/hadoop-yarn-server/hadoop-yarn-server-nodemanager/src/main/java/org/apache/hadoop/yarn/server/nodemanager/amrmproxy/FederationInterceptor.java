@@ -143,7 +143,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   private SubClusterResolver subClusterResolver;
 
   /** The policy used to split requests among sub-clusters. */
-  private FederationAMRMProxyPolicy policyInterpreter;
+  private FederationAMRMProxyPolicy policyInterpreter;                              // 该策略用来拆分资源请求到各个子集群
 
   /**
    * The proxy ugi used to talk to home RM, loaded with the up-to-date AMRMToken

@@ -97,7 +97,7 @@ public abstract class AbstractClientRequestInterceptor
    * Gets the next {@link ClientRequestInterceptor} in the chain.
    */
   @Override
-  public ClientRequestInterceptor getNextInterceptor() {
+  public ClientRequestInterceptor getNextInterceptor() {                            // 调用拦截器链的下一个拦截器，系统默认不会调用
     return this.nextInterceptor;
   }
 

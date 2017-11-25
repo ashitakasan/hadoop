@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
  * preferences among sub-clusters. Highest weight among active subclusters is
  * chosen.
  */
-public class PriorityRouterPolicy extends AbstractRouterPolicy {
+public class PriorityRouterPolicy extends AbstractRouterPolicy {                    // 以 weights 作为优先级，选择 weights 最高的子集群
 
   @Override
   public SubClusterId getHomeSubcluster(

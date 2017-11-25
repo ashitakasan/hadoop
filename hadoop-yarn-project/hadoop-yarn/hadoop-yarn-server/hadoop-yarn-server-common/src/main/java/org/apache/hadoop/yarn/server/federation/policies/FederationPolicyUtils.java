@@ -90,7 +90,7 @@ public final class FederationPolicyUtils {
    */
   public static SubClusterPolicyConfiguration loadPolicyConfiguration(
       String queue, Configuration conf,
-      FederationStateStoreFacade federationFacade) {
+      FederationStateStoreFacade federationFacade) {                                // 从 FD store 中加载指定队列的 策略配置
 
     // The facade might cache this request, based on its parameterization
     SubClusterPolicyConfiguration configuration = null;
@@ -118,7 +118,7 @@ public final class FederationPolicyUtils {
     }
 
     // or from XML conf otherwise.
-    if (configuration == null) {
+    if (configuration == null) {                                                    // 如果没有则重新构造
       LOG.info("No policy configured for default queue {} in StateStore,"
           + " fallback to local config", queue);
 
@@ -153,7 +153,7 @@ public final class FederationPolicyUtils {
       FederationAMRMProxyPolicy oldPolicy, Configuration conf,
       FederationStateStoreFacade federationFacade,
       SubClusterId homeSubClusterId)
-      throws FederationPolicyInitializationException {
+      throws FederationPolicyInitializationException {                              // 从 store 中返回指定队列的 AMRM 策略（即AM多集群资源），NM 的 AM 使用
 
     // Local policy and its configuration
     SubClusterPolicyConfiguration configuration =
@@ -188,7 +188,7 @@ public final class FederationPolicyUtils {
   public static void validateSubClusterAvailability(
       List<SubClusterId> activeSubClusters,
       List<SubClusterId> blackListSubClusters)
-      throws FederationPolicyException {
+      throws FederationPolicyException {                                            // 确保至少有一个 active 的子集群
     if (activeSubClusters != null && !activeSubClusters.isEmpty()) {
       if (blackListSubClusters == null) {
         return;
@@ -212,7 +212,7 @@ public final class FederationPolicyUtils {
    * @param weights the weight array
    * @return the index of the sample in the array
    */
-  public static int getWeightedRandom(ArrayList<Float> weights) {
+  public static int getWeightedRandom(ArrayList<Float> weights) {                   // 在 weights 中随机选值，weight 越高越容易被选中
     int i;
     float totalWeight = 0;
     for (i = 0; i < weights.size(); i++) {

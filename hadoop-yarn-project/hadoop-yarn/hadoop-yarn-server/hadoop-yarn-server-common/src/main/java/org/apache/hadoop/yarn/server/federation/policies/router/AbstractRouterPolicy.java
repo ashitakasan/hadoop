@@ -59,7 +59,7 @@ public abstract class AbstractRouterPolicy extends
     // compatible with YARN behavior.
     String queue = appSubmissionContext.getQueue();
     if (queue == null) {
-      appSubmissionContext.setQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
+      appSubmissionContext.setQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);          // 如果没有执行 queue 参数，则使用默认队列，这里可能需要修改（参数）
     }
   }
 

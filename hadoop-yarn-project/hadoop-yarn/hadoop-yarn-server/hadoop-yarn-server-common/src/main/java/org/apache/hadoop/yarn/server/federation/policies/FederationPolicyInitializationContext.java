@@ -28,9 +28,9 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
  */
 public class FederationPolicyInitializationContext {
 
-  private SubClusterPolicyConfiguration federationPolicyConfiguration;
-  private SubClusterResolver federationSubclusterResolver;
-  private FederationStateStoreFacade federationStateStoreFacade;
+  private SubClusterPolicyConfiguration federationPolicyConfiguration;              // sub cluster 策略配置
+  private SubClusterResolver federationSubclusterResolver;                          // 解析节点到子集群、机架的工具
+  private FederationStateStoreFacade federationStateStoreFacade;                    // FD 策略储存
   private SubClusterId homeSubcluster;
 
   public FederationPolicyInitializationContext() {
