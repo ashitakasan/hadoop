@@ -37,7 +37,7 @@ import org.apache.hadoop.util.ToolRunner;
  * This program is the CLI utility for the CredentialProvider facilities in
  * Hadoop.
  */
-public class CredentialShell extends CommandShell {
+public class CredentialShell extends CommandShell {                                 // Hadoop 为 CredentialProvider 提供的命令行工具
   final static private String USAGE_PREFIX = "Usage: hadoop credential " +
       "[generic options]\n";
   final static private String COMMANDS =

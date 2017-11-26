@@ -45,7 +45,7 @@ import java.text.MessageFormat;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class FileBasedKeyStoresFactory implements KeyStoresFactory {
+public class FileBasedKeyStoresFactory implements KeyStoresFactory {                // 从 keystore 文件读取 certificates 的实现类
 
   private static final Logger LOG =
       LoggerFactory.getLogger(FileBasedKeyStoresFactory.class);
@@ -132,7 +132,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
    */
   @Override
   public void init(SSLFactory.Mode mode)
-    throws IOException, GeneralSecurityException {
+    throws IOException, GeneralSecurityException {                                  // 初始化 keystores，并加载 keyManagers、trustManager
 
     boolean requireClientCert =
       conf.getBoolean(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY,

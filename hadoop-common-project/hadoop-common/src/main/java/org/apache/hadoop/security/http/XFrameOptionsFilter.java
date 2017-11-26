@@ -40,7 +40,7 @@ import org.apache.hadoop.conf.Configuration;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class XFrameOptionsFilter implements Filter {
+public class XFrameOptionsFilter implements Filter {                                // 该过滤器保护webapps免受点击攻击，使用 frame 将资源嵌入到另一个应用中
   public static final String X_FRAME_OPTIONS = "X-Frame-Options";
   public static final String CUSTOM_HEADER_PARAM = "xframe-options";
 

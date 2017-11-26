@@ -42,7 +42,7 @@ import java.util.Map;
  * All related configuration properties have 'hadoop.http.authentication.'
  * as prefix.
  */
-public class AuthenticationFilterInitializer extends FilterInitializer {
+public class AuthenticationFilterInitializer extends FilterInitializer {            // 提供了对 Kerberos HTTP SPNEGO 身份验证和代理用户身份验证的支持
 
   static final String PREFIX = "hadoop.http.authentication.";
 

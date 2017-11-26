@@ -40,7 +40,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class SaslOutputStream extends OutputStream {
+public class SaslOutputStream extends OutputStream {                                // SaslOutputStream 由一个输入流和 SaslServer (或SaslClient) 组成
 
   private final OutputStream outStream;
   // processed data ready to be written out
@@ -62,7 +62,7 @@ public class SaslOutputStream extends OutputStream {
    * @param saslServer
    *          an initialized SaslServer object
    */
-  public SaslOutputStream(OutputStream outStream, SaslServer saslServer) {
+  public SaslOutputStream(OutputStream outStream, SaslServer saslServer) {          // 从数据流和 SaslServer 创建 SaslOutputStream
     this.saslServer = saslServer;
     this.saslClient = null;
     String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
@@ -84,7 +84,7 @@ public class SaslOutputStream extends OutputStream {
    * @param saslClient
    *          an initialized SaslClient object
    */
-  public SaslOutputStream(OutputStream outStream, SaslClient saslClient) {
+  public SaslOutputStream(OutputStream outStream, SaslClient saslClient) {          // 从输入流和 SaslClient 创建 SaslOutputStream
     this.saslServer = null;
     this.saslClient = saslClient;
     String qop = (String) saslClient.getNegotiatedProperty(Sasl.QOP);
@@ -103,7 +103,7 @@ public class SaslOutputStream extends OutputStream {
    * @exception SaslException
    *              if a SASL error occurs.
    */
-  private void disposeSasl() throws SaslException {
+  private void disposeSasl() throws SaslException {                                 // 处理 Sasl 可能正在使用任何系统资源或安全敏感信息
     if (saslClient != null) {
       saslClient.dispose();
     }
@@ -171,7 +171,7 @@ public class SaslOutputStream extends OutputStream {
     }
     try {
       if (saslServer != null) { // using saslServer
-        saslToken = saslServer.wrap(inBuf, off, len);
+        saslToken = saslServer.wrap(inBuf, off, len);                               // 将 inBuf 中的数据包装后写入流中，然后写入数据包装后的长度
       } else { // using saslClient
         saslToken = saslClient.wrap(inBuf, off, len);
       }

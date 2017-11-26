@@ -72,7 +72,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
+public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {       // 检查主机名是否匹配存储在服务器中 X.509 证书的接口
 
     @Override
     boolean verify(String host, SSLSession session);

@@ -135,7 +135,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
     try {
       // shell command does not expect '@' at the beginning of the group name
       result = Shell.execCommand(
-        Shell.getUsersForNetgroupCommand(netgroup.substring(1)));
+        Shell.getUsersForNetgroupCommand(netgroup.substring(1)));                   // 执行 getent 获取组用户
     } catch (ExitCodeException e) {
       // if we didn't get the group - just return empty list;
       LOG.warn("error getting users for netgroup " + netgroup, e);

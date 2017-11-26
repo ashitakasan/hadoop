@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class RestCsrfPreventionFilter implements Filter {
+public class RestCsrfPreventionFilter implements Filter {                           // 该过滤器提供保护防止跨域请求伪造(CSRF)攻击 REST API
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RestCsrfPreventionFilter.class);

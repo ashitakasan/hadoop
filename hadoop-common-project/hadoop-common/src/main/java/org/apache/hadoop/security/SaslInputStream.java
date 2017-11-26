@@ -40,11 +40,11 @@ import org.slf4j.LoggerFactory;
  * SaslClient) so that read() methods return data that are read in from the
  * underlying InputStream but have been additionally processed by the SaslServer
  * (or SaslClient) object. The SaslServer (or SaslClient) object must be fully
- * initialized before being used by a SaslInputStream.
+ * initialized before being used by a SaslInputStream.                              // SaslInputStream 从被处理过的输入流中读取数据
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class SaslInputStream extends InputStream implements ReadableByteChannel {
+public class SaslInputStream extends InputStream implements ReadableByteChannel {   // SaslInputStream 由一个输入流和 SaslServer (或SaslClient) 组成
   public static final Logger LOG =
       LoggerFactory.getLogger(SaslInputStream.class);
 
@@ -90,9 +90,9 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * Exit condition: ostart <= ofinish <br>
    * 
    * return (ofinish-ostart) (we have this many bytes for you), 0 (no data now,
-   * but could have more later), or -1 (absolutely no more data)
+   * but could have more later), or -1 (absolutely no more data)                    // 返回 0 表示后续会有数据到来，返回 -1 表示再也不会有数据
    */
-  private int readMoreData() throws IOException {
+  private int readMoreData() throws IOException {                                   // 从流中读取数据，一段一段的读取：先读长度、再读数据
     try {
       inStream.readFully(lengthBuf);
       int length = unsignedBytesToInt(lengthBuf);
@@ -105,7 +105,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
     }
     try {
       if (saslServer != null) { // using saslServer
-        obuffer = saslServer.unwrap(saslToken, 0, saslToken.length);
+        obuffer = saslServer.unwrap(saslToken, 0, saslToken.length);                // 打开从客户端接收的字节数组，只能在身份验证交换完成后调用
       } else { // using saslClient
         obuffer = saslClient.unwrap(saslToken, 0, saslToken.length);
       }
@@ -131,7 +131,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * @exception SaslException
    *              if a SASL error occurs.
    */
-  private void disposeSasl() throws SaslException {
+  private void disposeSasl() throws SaslException {                                 // 处理 Sasl 客户端可能使用的任何系统资源或安全敏感信息
     if (saslClient != null) {
       saslClient.dispose();
     }
@@ -150,12 +150,12 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * @param saslServer
    *          an initialized SaslServer object
    */
-  public SaslInputStream(InputStream inStream, SaslServer saslServer) {
+  public SaslInputStream(InputStream inStream, SaslServer saslServer) {             // 从数据流和 SaslServer 创建 SaslInputStream
     this.inStream = new DataInputStream(inStream);
     this.saslServer = saslServer;
     this.saslClient = null;
     String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
-    this.useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
+    this.useWrap = qop != null && !"auth".equalsIgnoreCase(qop);                    // 通过系统配置决定是否包装传输的数据
   }
 
   /**
@@ -168,7 +168,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * @param saslClient
    *          an initialized SaslClient object
    */
-  public SaslInputStream(InputStream inStream, SaslClient saslClient) {
+  public SaslInputStream(InputStream inStream, SaslClient saslClient) {             // 从输入流和 SaslClient 创建 SaslInputStream
     this.inStream = new DataInputStream(inStream);
     this.saslServer = null;
     this.saslClient = saslClient;
@@ -191,7 +191,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    *              if an I/O error occurs.
    */
   @Override
-  public int read() throws IOException {
+  public int read() throws IOException {                                            // 从输入流中读取下一个字节的数据
     if (!useWrap) {
       return inStream.read();
     }
@@ -199,7 +199,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
       // we loop for new data as we are blocking
       int i = 0;
       while (i == 0)
-        i = readMoreData();
+        i = readMoreData();                                                         // 如果没有新的数据就一直再这里循环
       if (i == -1)
         return -1;
     }
@@ -246,12 +246,12 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    *              if an I/O error occurs.
    */
   @Override
-  public int read(byte[] b, int off, int len) throws IOException {
+  public int read(byte[] b, int off, int len) throws IOException {                  // 从数据流中的 off 开始读取 len 字节到数组 b 中，返回实际读取的字节数
     if (len == 0) {
       return 0;
     }
     if (!useWrap) {
-      return inStream.read(b, off, len);
+      return inStream.read(b, off, len);                                            // 如果没有包装，则直接读取并返回，如果有，则读完一段后解析再返回
     }
     if (ostart >= ofinish) {
       // we loop for new data as we are blocking
@@ -294,7 +294,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    *              if an I/O error occurs.
    */
   @Override
-  public long skip(long n) throws IOException {
+  public long skip(long n) throws IOException {                                     // 从字节数组中跳过 n 字节
     if (!useWrap) {
       return inStream.skip(n);
     }
@@ -321,7 +321,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    *              if an I/O error occurs.
    */
   @Override
-  public int available() throws IOException {
+  public int available() throws IOException {                                       // 无阻塞地返回可以从这个输入流中读取的字节数
     if (!useWrap) {
       return inStream.available();
     }

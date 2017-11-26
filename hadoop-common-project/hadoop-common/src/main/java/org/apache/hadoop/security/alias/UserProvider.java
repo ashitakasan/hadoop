@@ -36,12 +36,12 @@ import org.apache.hadoop.security.UserGroupInformation;
  * URI of "user:///".
  */
 @InterfaceAudience.Private
-public class UserProvider extends CredentialProvider {
+public class UserProvider extends CredentialProvider {                              // UGI 的凭据提供商，使用当前用户关联的凭证来查找 credentials
   public static final String SCHEME_NAME = "user";
   private final UserGroupInformation user;
   private final Credentials credentials;
 
-  private UserProvider() throws IOException {
+  private UserProvider() throws IOException {                                       // 构造 UserProvider 时，从当前登陆用户中获取所有的 credentials
     user = UserGroupInformation.getCurrentUser();
     credentials = user.getCredentials();
   }
@@ -96,7 +96,7 @@ public class UserProvider extends CredentialProvider {
     user.addCredentials(credentials);
   }
 
-  public static class Factory extends CredentialProviderFactory {
+  public static class Factory extends CredentialProviderFactory {                   // UserProvider 的工厂类
 
     @Override
     public CredentialProvider createProvider(URI providerName,

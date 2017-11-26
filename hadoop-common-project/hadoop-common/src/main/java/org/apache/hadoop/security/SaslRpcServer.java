@@ -93,7 +93,7 @@ public class SaslRpcServer {
   
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public SaslRpcServer(AuthMethod authMethod) throws IOException {
+  public SaslRpcServer(AuthMethod authMethod) throws IOException {                  // 根据验证方式 AuthMethod 创建 SaslRpcServer
     this.authMethod = authMethod;
     mechanism = authMethod.getMechanismName();    
     switch (authMethod) {
@@ -114,7 +114,7 @@ public class SaslRpcServer {
         protocol = parts[0];
         // should verify service host is present here rather than in create()
         // but lazy tests are using a UGI that isn't a SPN...
-        serverId = (parts.length < 2) ? "" : parts[1];
+        serverId = (parts.length < 2) ? "" : parts[1];                              // kerberos 下配置的 server id
         break;
       }
       default:
@@ -129,7 +129,7 @@ public class SaslRpcServer {
   public SaslServer create(final Connection connection,
                            final Map<String,?> saslProperties,
                            SecretManager<TokenIdentifier> secretManager
-      ) throws IOException, InterruptedException {
+      ) throws IOException, InterruptedException {                                  // 创建 SaslServer，在 RPC Server 中使用
     UserGroupInformation ugi = null;
     final CallbackHandler callback;
     switch (authMethod) {
@@ -153,7 +153,7 @@ public class SaslRpcServer {
             "Server does not support SASL " + authMethod);
     }
     
-    final SaslServer saslServer;
+    final SaslServer saslServer;                                                    // 如果当前登陆用户非空，则通过当前用户创建 SaslServer
     if (ugi != null) {
       saslServer = ugi.doAs(
         new PrivilegedExceptionAction<SaslServer>() {
@@ -218,7 +218,7 @@ public class SaslRpcServer {
 
   /** Authentication method */
   @InterfaceStability.Evolving
-  public enum AuthMethod {
+  public enum AuthMethod {                                                          // 系统提供的几种请求认证方式及对应的认证机制
     SIMPLE((byte) 80, ""),
     KERBEROS((byte) 81, "GSSAPI"),
     @Deprecated
@@ -261,7 +261,7 @@ public class SaslRpcServer {
 
   /** CallbackHandler for SASL DIGEST-MD5 mechanism */
   @InterfaceStability.Evolving
-  public static class SaslDigestCallbackHandler implements CallbackHandler {
+  public static class SaslDigestCallbackHandler implements CallbackHandler {        // TOKEN 验证类型的 CallbackHandler
     private SecretManager<TokenIdentifier> secretManager;
     private Server.Connection connection; 
     
@@ -336,7 +336,7 @@ public class SaslRpcServer {
 
   /** CallbackHandler for SASL GSSAPI Kerberos mechanism */
   @InterfaceStability.Evolving
-  public static class SaslGssCallbackHandler implements CallbackHandler {
+  public static class SaslGssCallbackHandler implements CallbackHandler {           // KERBEROS 验证类型的 CallbackHandler
 
     @Override
     public void handle(Callback[] callbacks) throws
@@ -369,9 +369,9 @@ public class SaslRpcServer {
   }
   
   // Sasl.createSaslServer is 100-200X slower than caching the factories!
-  private static class FastSaslServerFactory implements SaslServerFactory {
+  private static class FastSaslServerFactory implements SaslServerFactory {         // 具有缓存功能的 SaslServerFactory
     private final Map<String,List<SaslServerFactory>> factoryCache =
-        new HashMap<String,List<SaslServerFactory>>();
+        new HashMap<String,List<SaslServerFactory>>();                                                           // mechanism <--> SaslServerFactory List
 
     FastSaslServerFactory(Map<String,?> props) {
       final Enumeration<SaslServerFactory> factories =
@@ -392,7 +392,7 @@ public class SaslRpcServer {
         String serverName, Map<String,?> props, CallbackHandler cbh)
         throws SaslException {
       SaslServer saslServer = null;
-      List<SaslServerFactory> factories = factoryCache.get(mechanism);
+      List<SaslServerFactory> factories = factoryCache.get(mechanism);              // 通过 factoryCache 创建 SaslServer
       if (factories != null) {
         for (SaslServerFactory factory : factories) {
           saslServer = factory.createSaslServer(

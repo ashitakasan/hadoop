@@ -73,7 +73,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FI
  * Set the environment variable {@code HADOOP_JAAS_DEBUG=true}
  * Set the log level for {@code org.apache.hadoop.security=DEBUG}
  */
-public class KDiag extends Configured implements Tool, Closeable {
+public class KDiag extends Configured implements Tool, Closeable {                  // Kerberos 认证诊断，Now Useless
 
   private static final Logger LOG = LoggerFactory.getLogger(KDiag.class);
   /**

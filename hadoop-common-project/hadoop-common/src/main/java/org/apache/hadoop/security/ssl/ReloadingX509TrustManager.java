@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class ReloadingX509TrustManager
-  implements X509TrustManager, Runnable {
+  implements X509TrustManager, Runnable {                                           // 当磁盘更改 truststore 文件时，重新加载 TrustManager 的配置
 
   @VisibleForTesting
   static final Logger LOG =
@@ -163,7 +163,7 @@ public final class ReloadingX509TrustManager
   }
 
   X509TrustManager loadTrustManager()
-  throws IOException, GeneralSecurityException {
+  throws IOException, GeneralSecurityException {                                    // 从 file 中加载 KeyStore，并初始化 TrustManager
     X509TrustManager trustManager = null;
     KeyStore ks = KeyStore.getInstance(type);
     FileInputStream in = new FileInputStream(file);

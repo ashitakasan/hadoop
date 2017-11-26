@@ -38,7 +38,7 @@ import java.net.URI;
  * file:///home/larry/creds.jceks
  */
 @InterfaceAudience.Private
-public class JavaKeyStoreProvider extends AbstractJavaKeyStoreProvider {
+public class JavaKeyStoreProvider extends AbstractJavaKeyStoreProvider {            // Credential Java 的密钥存储文件格式，可存储在任何 Hadoop 文件系统中
   public static final String SCHEME_NAME = "jceks";
 
   private FileSystem fs;
@@ -92,7 +92,7 @@ public class JavaKeyStoreProvider extends AbstractJavaKeyStoreProvider {
   /**
    * The factory to create JksProviders, which is used by the ServiceLoader.
    */
-  public static class Factory extends CredentialProviderFactory {
+  public static class Factory extends CredentialProviderFactory {                   // JavaKeyStoreProvider 的工厂类
     @Override
     public CredentialProvider createProvider(URI providerName,
         Configuration conf) throws IOException {

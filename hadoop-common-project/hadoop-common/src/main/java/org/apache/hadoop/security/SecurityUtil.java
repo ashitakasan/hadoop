@@ -170,7 +170,7 @@ public final class SecurityUtil {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static String getServerPrincipal(String principalConfig,
-      String hostname) throws IOException {
+      String hostname) throws IOException {                                         // 返回有效的 principal 名称，主机名为完整域名
     String[] components = getComponents(principalConfig);
     if (components == null || components.length != 3
         || !components[1].equals(HOSTNAME_PATTERN)) {
@@ -238,7 +238,7 @@ public final class SecurityUtil {
    * @throws UnknownHostException
    */
   static String getLocalHostName(@Nullable Configuration conf)
-      throws UnknownHostException {
+      throws UnknownHostException {                                                 // 返回本地主机名，如果配置了 DNS，则查询 DNS
     if (conf != null) {
       String dnsInterface = conf.get(HADOOP_SECURITY_DNS_INTERFACE_KEY);
       String nameServer = conf.get(HADOOP_SECURITY_DNS_NAMESERVER_KEY);
@@ -272,7 +272,7 @@ public final class SecurityUtil {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static void login(final Configuration conf,
-      final String keytabFileKey, final String userNameKey) throws IOException {
+      final String keytabFileKey, final String userNameKey) throws IOException {    // 使用 keytabFileKey 登陆用户 userNameKey
     login(conf, keytabFileKey, userNameKey, getLocalHostName(conf));
   }
 
@@ -309,7 +309,7 @@ public final class SecurityUtil {
         .getProperty("user.name"));
     String principalName = SecurityUtil.getServerPrincipal(principalConfig,
         hostname);
-    UserGroupInformation.loginUserFromKeytab(principalName, keytabFilename);
+    UserGroupInformation.loginUserFromKeytab(principalName, keytabFilename);        // 以 keytab 登陆用户，并设置 UserGroupInformation.loginUser
   }
 
   /**
@@ -466,7 +466,7 @@ public final class SecurityUtil {
    * user cannot be determined, this will log a FATAL error and exit
    * the whole JVM.
    */
-  public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) { 
+  public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) {            //  使用守护进程的登录用户执行给定的操作
     if (UserGroupInformation.isSecurityEnabled()) {
       UserGroupInformation ugi = null;
       try { 
@@ -474,7 +474,7 @@ public final class SecurityUtil {
       } catch (IOException e) {
         LOG.error("Exception while getting login user", e);
         e.printStackTrace();
-        Runtime.getRuntime().exit(-1);
+        Runtime.getRuntime().exit(-1);                                              // 如果无法确定登录用户，则会记录一个致命错误并退出整个JVM
       }
       return ugi.doAs(action);
     } else {
@@ -492,7 +492,7 @@ public final class SecurityUtil {
    */
   public static <T> T doAsLoginUser(PrivilegedExceptionAction<T> action)
       throws IOException {
-    return doAsUser(UserGroupInformation.getLoginUser(), action);
+    return doAsUser(UserGroupInformation.getLoginUser(), action);                   // 使用守护进程的 loginUser 执行给定的操作，会抛出异常
   }
 
   /**
@@ -505,7 +505,7 @@ public final class SecurityUtil {
    */
   public static <T> T doAsCurrentUser(PrivilegedExceptionAction<T> action)
       throws IOException {
-    return doAsUser(UserGroupInformation.getCurrentUser(), action);
+    return doAsUser(UserGroupInformation.getCurrentUser(), action);                 // 使用当前线程栈内登陆的用户执行给定的操作
   }
 
   private static <T> T doAsUser(UserGroupInformation ugi,
@@ -582,7 +582,7 @@ public final class SecurityUtil {
    * NOTE: this resolver is only used if:
    *       hadoop.security.token.service.use_ip=false 
    */
-  protected static class QualifiedHostResolver implements HostResolver {
+  protected static class QualifiedHostResolver implements HostResolver {            // 这是标准 java 域名解析器所缺少的具有重要属性的备用解析器
     @SuppressWarnings("unchecked")
     private List<String> searchDomains =
         ResolverConfiguration.open().searchlist();
@@ -685,7 +685,7 @@ public final class SecurityUtil {
     }
   }
 
-  public static AuthenticationMethod getAuthenticationMethod(Configuration conf) {
+  public static AuthenticationMethod getAuthenticationMethod(Configuration conf) {  // 获取当前系统配置的验证方式，默认为 SIMPLE
     String value = conf.get(HADOOP_SECURITY_AUTHENTICATION, "simple");
     try {
       return Enum.valueOf(AuthenticationMethod.class,

@@ -33,7 +33,7 @@ public class JniBasedUnixGroupsNetgroupMappingWithFallback implements
 
   private GroupMappingServiceProvider impl;
 
-  public JniBasedUnixGroupsNetgroupMappingWithFallback() {
+  public JniBasedUnixGroupsNetgroupMappingWithFallback() {                          // 这里 Fallback 仅仅是包转，如果 native 没有启用则使用 Shell Based
     if (NativeCodeLoader.isNativeCodeLoaded()) {
       this.impl = new JniBasedUnixGroupsNetgroupMapping();
     } else {

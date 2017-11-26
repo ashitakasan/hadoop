@@ -38,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
  * The custom class can be specified via configuration.
  *
  */
-public class SaslPropertiesResolver implements Configurable{
+public class SaslPropertiesResolver implements Configurable{                        // 提供用于连接的 Sasl 属性
   private Map<String,String> properties;
   Configuration conf;
 
@@ -50,7 +50,7 @@ public class SaslPropertiesResolver implements Configurable{
    * @param conf
    * @return SaslPropertiesResolver
    */
-  public static SaslPropertiesResolver getInstance(Configuration conf) {
+  public static SaslPropertiesResolver getInstance(Configuration conf) {            // 返回 Sasl 属性解析器的实例
     Class<? extends SaslPropertiesResolver> clazz =
       conf.getClass(
           CommonConfigurationKeysPublic.HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS,

@@ -75,7 +75,7 @@ public class JniBasedUnixGroupsNetgroupMapping
    * Refresh the netgroup cache
    */
   @Override
-  public void cacheGroupsRefresh() throws IOException {
+  public void cacheGroupsRefresh() throws IOException {                             // 清空用户到组的缓存
     List<String> groups = NetgroupCache.getNetgroupNames();
     NetgroupCache.clear();
     cacheGroupsAdd(groups);
@@ -87,7 +87,7 @@ public class JniBasedUnixGroupsNetgroupMapping
    * @param groups list of group names to add to cache
    */
   @Override
-  public void cacheGroupsAdd(List<String> groups) throws IOException {
+  public void cacheGroupsAdd(List<String> groups) throws IOException {              // 添加用户 <-> 组的映射到缓存中
     for(String group: groups) {
       if(group.length() == 0) {
         // better safe than sorry (should never happen)
@@ -109,7 +109,7 @@ public class JniBasedUnixGroupsNetgroupMapping
    * @param netgroup return users for this netgroup
    * @return list of users for a given netgroup
    */
-  protected synchronized List<String> getUsersForNetgroup(String netgroup) {
+  protected synchronized List<String> getUsersForNetgroup(String netgroup) {        // 获取一个组的所有用户，该方法必须同步
     String[] users = null;
     try {
       // JNI code does not expect '@' at the beginning of the group name

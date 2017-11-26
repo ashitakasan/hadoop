@@ -50,10 +50,10 @@ import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of {@link GroupMappingServiceProvider} which
- * connects directly to an LDAP server for determining group membership.
+ * connects directly to an LDAP server for determining group membership.            // GroupMappingServiceProvider 的 LDAP 协议的实现
  * 
  * This provider should be used only if it is necessary to map users to
- * groups that reside exclusively in an Active Directory or LDAP installation.
+ * groups that reside exclusively in an Active Directory or LDAP installation.      // 该类主要用来从 LDAP 服务中获取用户和组的对应信息
  * The common case for a Hadoop installation will be that LDAP users and groups
  * materialized on the Unix servers, and for an installation like that,
  * ShellBasedUnixGroupsMapping is preferred. However, in cases where

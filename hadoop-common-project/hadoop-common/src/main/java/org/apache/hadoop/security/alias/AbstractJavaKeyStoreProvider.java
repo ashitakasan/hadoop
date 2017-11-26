@@ -50,7 +50,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * Abstract class for implementing credential providers that are based on
  * Java Keystores as the underlying credential store.
  *
- * The password for the keystore is taken from the HADOOP_CREDSTORE_PASSWORD
+ * The password for the keystore is taken from the HADOOP_CREDSTORE_PASSWORD        // key 储存的密码从环境变量中获取 HADOOP_CREDSTORE_PASSWORD
  * environment variable with a default of 'none'.
  *
  * It is expected that for access to credential protected resource to copy the
@@ -59,7 +59,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * used by MapReduce tasks.
  */
 @InterfaceAudience.Private
-public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
+public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {     // 用于实现基于 Java keystore 作为底层凭证存储的凭据提供者
   public static final Logger LOG = LoggerFactory.getLogger(
       AbstractJavaKeyStoreProvider.class);
   public static final String CREDENTIAL_PASSWORD_ENV_VAR =
@@ -84,7 +84,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
     this.conf = conf;
     initFileSystem(uri);
     locateKeystore();
-    ReadWriteLock lock = new ReentrantReadWriteLock(true);
+    ReadWriteLock lock = new ReentrantReadWriteLock(true);                          // 保证每次读写密钥都是原子的
     readLock = lock.readLock();
     writeLock = lock.writeLock();
   }
@@ -160,7 +160,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
 
   protected void initFileSystem(URI keystoreUri)
       throws IOException {
-    path = ProviderUtils.unnestUri(keystoreUri);
+    path = ProviderUtils.unnestUri(keystoreUri);                                    // 根据 URI 初始化密钥储存路径
     if (LOG.isDebugEnabled()) {
       LOG.debug("backing jks path initialized to " + path);
     }
@@ -193,14 +193,14 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
     }
   }
 
-  public static char[] bytesToChars(byte[] bytes) throws IOException {
+  public static char[] bytesToChars(byte[] bytes) throws IOException {              // 将比特格式的密钥转为 char 格式
     String pass;
     pass = new String(bytes, Charsets.UTF_8);
     return pass.toCharArray();
   }
 
   @Override
-  public List<String> getAliases() throws IOException {
+  public List<String> getAliases() throws IOException {                             // 返回目前已储存的所有 key 的别名
     readLock.lock();
     try {
       ArrayList<String> list = new ArrayList<String>();
@@ -260,7 +260,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
   }
 
   CredentialEntry innerSetCredential(String alias, char[] material)
-      throws IOException {
+      throws IOException {                                                          // 储存一条 别名+密钥，字符格式的密钥会以比特格式储存
     writeLock.lock();
     try {
       keyStore.setKeyEntry(alias,
@@ -285,7 +285,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
         return;
       }
       LOG.debug("Writing out keystore.");
-      try (OutputStream out = getOutputStreamForKeystore()) {
+      try (OutputStream out = getOutputStreamForKeystore()) {                       // 持久化 keyStore
         keyStore.store(out, password);
       } catch (KeyStoreException e) {
         throw new IOException("Can't store keystore " + this, e);
@@ -307,7 +307,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
    * @throws IOException If there is a problem reading the password file
    * or a problem reading the keystore.
    */
-  private void locateKeystore() throws IOException {
+  private void locateKeystore() throws IOException {                                // 加载 keyStore，所有密钥都存在这里
     try {
       password = ProviderUtils.locatePassword(CREDENTIAL_PASSWORD_ENV_VAR,
           conf.get(CREDENTIAL_PASSWORD_FILE_KEY));
@@ -318,7 +318,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
       ks = KeyStore.getInstance("jceks");
       if (keystoreExists()) {
         stashOriginalFilePermissions();
-        try (InputStream in = getInputStreamForFile()) {
+        try (InputStream in = getInputStreamForFile()) {                            // 从密钥文件中加载密码
           ks.load(in, password);
         }
       } else {

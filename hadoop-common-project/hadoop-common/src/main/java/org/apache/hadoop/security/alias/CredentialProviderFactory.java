@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public abstract class CredentialProviderFactory {
+public abstract class CredentialProviderFactory {                                   // 根据配置中给出的路径创建 CredentialProvider 列表的工厂
   public static final String CREDENTIAL_PROVIDER_PATH =
       CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
 
@@ -53,7 +53,7 @@ public abstract class CredentialProviderFactory {
   // Iterate through the serviceLoader to avoid lazy loading.
   // Lazy loading would require synchronization in concurrent use cases.
   static {
-    Iterator<CredentialProviderFactory> iterServices = serviceLoader.iterator();
+    Iterator<CredentialProviderFactory> iterServices = serviceLoader.iterator();    // 防止延迟加载，这里只加载字节码
     while (iterServices.hasNext()) {
       iterServices.next();
     }

@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  * Utility methods for both key and credential provider APIs.
  *
  */
-public final class ProviderUtils {
+public final class ProviderUtils {                                                  // 密钥和 credential provider 的 util 方法
   @VisibleForTesting
   public static final String NO_PASSWORD_WARN =
       "WARNING: You have accepted the use of the default provider password\n" +
@@ -138,7 +138,7 @@ public final class ProviderUtils {
    */
   public static Configuration excludeIncompatibleCredentialProviders(
       Configuration config, Class<? extends FileSystem> fileSystemClass)
-          throws IOException {
+          throws IOException {                                                      // 从配置中剔除有问题的 CredentialProvider
 
     String providerPath = config.get(
         CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH);

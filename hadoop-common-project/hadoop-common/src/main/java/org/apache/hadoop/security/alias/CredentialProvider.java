@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public abstract class CredentialProvider {
+public abstract class CredentialProvider {                                          // Hadoop 应用程序的凭据或密码的提供者，将凭据存储从用户中分离出来
   public static final String CLEAR_TEXT_FALLBACK =
       CommonConfigurationKeysPublic.
           HADOOP_SECURITY_CREDENTIAL_CLEAR_TEXT_FALLBACK;
@@ -43,7 +43,7 @@ public abstract class CredentialProvider {
   /**
    * The combination of both the alias and the actual credential value.
    */
-  public static class CredentialEntry {
+  public static class CredentialEntry {                                             // 凭证和其别名的组合类
     private final String alias;
     private final char[] credential;
 
@@ -84,7 +84,7 @@ public abstract class CredentialProvider {
    * passwords rather than for long term storage.
    * @return true if transient, false otherwise
    */
-  public boolean isTransient() {
+  public boolean isTransient() {                                                    // 默认情况下，credential 都是要持久化的
     return false;
   }
 
@@ -118,7 +118,7 @@ public abstract class CredentialProvider {
    * @throws IOException
    */
   public abstract CredentialEntry createCredentialEntry(String name, 
-      char[] credential) throws IOException;
+      char[] credential) throws IOException;                                        // 创建一个 credential，别名不能已存在
 
   /**
    * Delete the given credential.
@@ -135,7 +135,7 @@ public abstract class CredentialProvider {
    * @return Whether or not the provider requires a password
    * @throws IOException
    */
-  public boolean needsPassword() throws IOException {
+  public boolean needsPassword() throws IOException {                               // 决定该 provider 是否需要密码
     return false;
   }
 
@@ -145,7 +145,7 @@ public abstract class CredentialProvider {
    * provider.
    * @return A warning and instructions for supplying the password
    */
-  public String noPasswordWarning() {
+  public String noPasswordWarning() {                                               // 如果需要密码但是未提供，该方法返回警告信息
     return null;
   }
 
@@ -155,7 +155,7 @@ public abstract class CredentialProvider {
    * the provider.
    * @return An error message and instructions for supplying the password
    */
-  public String noPasswordError() {
+  public String noPasswordError() {                                                 // 如果需要密码但是未提供，该方法返回错误信息
     return null;
   }
 }

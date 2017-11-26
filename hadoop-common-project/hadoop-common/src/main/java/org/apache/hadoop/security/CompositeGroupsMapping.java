@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class CompositeGroupsMapping
-    implements GroupMappingServiceProvider, Configurable {
+    implements GroupMappingServiceProvider, Configurable {                          // 结合了其他的 GroupMappingServiceProvider 的实现
   
   public static final String MAPPING_PROVIDERS_CONFIG_KEY = GROUP_MAPPING_CONFIG_PREFIX + ".providers";
   public static final String MAPPING_PROVIDERS_COMBINED_CONFIG_KEY = MAPPING_PROVIDERS_CONFIG_KEY + ".combined";
@@ -51,7 +51,7 @@ public class CompositeGroupsMapping
   private static final Logger LOG =
       LoggerFactory.getLogger(CompositeGroupsMapping.class);
 
-  private List<GroupMappingServiceProvider> providersList = 
+  private List<GroupMappingServiceProvider> providersList =                         // 组映射服务的实现的列表
 		  new ArrayList<GroupMappingServiceProvider>();
   
   private Configuration conf;
@@ -66,7 +66,7 @@ public class CompositeGroupsMapping
    * @return list of groups for a given user
    */
   @Override
-  public synchronized List<String> getGroups(String user) throws IOException {
+  public synchronized List<String> getGroups(String user) throws IOException {      // 获取所有 Provider 提供的用户的组信息
     Set<String> groupSet = new TreeSet<String>();
 
     List<String> groups = null;

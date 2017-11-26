@@ -35,7 +35,7 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 @SuppressWarnings("all")
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class HadoopKerberosName extends KerberosName {
+public class HadoopKerberosName extends KerberosName {                              // 实现了 Kerberos Subject 名称的解析和处理
 
   /**
    * Create a name from the full Kerberos principal name.
@@ -54,7 +54,7 @@ public class HadoopKerberosName extends KerberosName {
    * @param conf the new configuration
    * @throws IOException
    */
-  public static void setConfiguration(Configuration conf) throws IOException {
+  public static void setConfiguration(Configuration conf) throws IOException {      // 从 conf 中获取配置的 Kerberos 规则
     final String defaultRule;
     switch (SecurityUtil.getAuthenticationMethod(conf)) {
       case KERBEROS:

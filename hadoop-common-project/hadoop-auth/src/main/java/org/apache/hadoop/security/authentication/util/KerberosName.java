@@ -41,15 +41,15 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings("all")
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class KerberosName {
+public class KerberosName {                                                         // 每个 principal 包含三部分：serviceName、hostName、realm
   private static final Logger LOG = LoggerFactory.getLogger(KerberosName.class);
 
-  /** The first component of the name */
-  private final String serviceName;
+  /** The first component of the name */                                            // 如 principal 为：user/host@domain.com
+  private final String serviceName;                                                 // user
   /** The second component of the name. It may be null. */
-  private final String hostName;
+  private final String hostName;                                                    // host
   /** The realm of the name. */
-  private final String realm;
+  private final String realm;                                                       // domain.com
 
   /**
    * A pattern that matches a Kerberos name with at most 2 components.

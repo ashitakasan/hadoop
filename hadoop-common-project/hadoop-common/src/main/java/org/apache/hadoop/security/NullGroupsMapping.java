@@ -22,7 +22,7 @@ import java.util.List;
  * This class provides groups mapping for {@link UserGroupInformation} when the
  * user group information will not be used.
  */
-public class NullGroupsMapping implements GroupMappingServiceProvider {
+public class NullGroupsMapping implements GroupMappingServiceProvider {             // GroupMappingServiceProvider 的实现，组信息不会被用到
   /**
    * Nothing is returned, so nothing is cached.
    * @param groups ignored

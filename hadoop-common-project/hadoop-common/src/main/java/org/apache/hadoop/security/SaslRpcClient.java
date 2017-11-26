@@ -85,7 +85,7 @@ public class SaslRpcClient {
   // This log is public as it is referenced in tests
   public static final Logger LOG = LoggerFactory.getLogger(SaslRpcClient.class);
 
-  private final UserGroupInformation ugi;
+  private final UserGroupInformation ugi;                                           // 当前发起请求的用户
   private final Class<?> protocol;
   private final InetSocketAddress serverAddr;  
   private final Configuration conf;
@@ -97,7 +97,7 @@ public class SaslRpcClient {
   private static final RpcRequestHeaderProto saslHeader = ProtoUtil
       .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
           OperationProto.RPC_FINAL_PACKET, AuthProtocol.SASL.callId,
-          RpcConstants.INVALID_RETRY_COUNT, RpcConstants.DUMMY_CLIENT_ID);
+          RpcConstants.INVALID_RETRY_COUNT, RpcConstants.DUMMY_CLIENT_ID);          // 创建默认的 sasl RPC 请求头
   private static final RpcSaslProto negotiateRequest =
       RpcSaslProto.newBuilder().setState(SaslState.NEGOTIATE).build();
 
@@ -110,7 +110,7 @@ public class SaslRpcClient {
    * @param conf - Configuration
    */
   public SaslRpcClient(UserGroupInformation ugi, Class<?> protocol,
-      InetSocketAddress serverAddr, Configuration conf) {
+      InetSocketAddress serverAddr, Configuration conf) {                           // 创建 SaslRpcClient，用于与 RPC Server 进行 SASL 认证
     this.ugi = ugi;
     this.protocol = protocol;
     this.serverAddr = serverAddr;
@@ -146,7 +146,7 @@ public class SaslRpcClient {
    * @throws IOException - misc errors
    */
   private SaslAuth selectSaslClient(List<SaslAuth> authTypes)
-      throws SaslException, AccessControlException, IOException {
+      throws SaslException, AccessControlException, IOException {                   // 使用第一个可用的认证方法实例化一个 sasl 客户端
     SaslAuth selectedAuthType = null;
     boolean switchToSimple = false;
     for (SaslAuth authType : authTypes) {
@@ -203,7 +203,7 @@ public class SaslRpcClient {
    * @throws IOException - misc errors
    */
   private SaslClient createSaslClient(SaslAuth authType)
-      throws SaslException, IOException {
+      throws SaslException, IOException {                                           // 根据 SaslAuth 创建 SaslClient，如果客户端不支持则返回空
     String saslUser = null;
     // SASL requires the client and server to use the same proto and serverId
     // if necessary, auth types below will verify they are valid
@@ -216,7 +216,7 @@ public class SaslRpcClient {
     final AuthMethod method = AuthMethod.valueOf(authType.getMethod());
     switch (method) {
       case TOKEN: {
-        Token<?> token = getServerToken(authType);
+        Token<?> token = getServerToken(authType);                                  // 获取客户端保存的服务器 token
         if (token == null) {
           LOG.debug("tokens aren't supported for this protocol" +
               " or user doesn't have one");
@@ -246,14 +246,14 @@ public class SaslRpcClient {
         throw new IOException("Unknown authentication method " + method);
     }
 
-    String mechanism = method.getMechanismName();
+    String mechanism = method.getMechanismName();                                   // kerberos 验证机制为 GSSAPI
     if (LOG.isDebugEnabled()) {
       LOG.debug("Creating SASL " + mechanism + "(" + method + ") "
           + " client to authenticate to service at " + saslServerName);
     }
     return Sasl.createSaslClient(
         new String[] { mechanism }, saslUser, saslProtocol, saslServerName,
-        saslProperties, saslCallback);
+        saslProperties, saslCallback);                                              // 创建 SaslClient
   }
 
   /**
@@ -263,7 +263,7 @@ public class SaslRpcClient {
    * @return Token for server, or null if no token available
    * @throws IOException - token selector cannot be instantiated
    */
-  private Token<?> getServerToken(SaslAuth authType) throws IOException {
+  private Token<?> getServerToken(SaslAuth authType) throws IOException {           // 尝试为服务器查找需要的 token
     TokenInfo tokenInfo = SecurityUtil.getTokenInfo(protocol, conf);
     LOG.debug("Get token info proto:" + protocol + " info:" + tokenInfo);
     if (tokenInfo == null) { // protocol has no support for tokens
@@ -288,7 +288,7 @@ public class SaslRpcClient {
    * @throws IOException - error determining configured principal
    */
   @VisibleForTesting
-  String getServerPrincipal(SaslAuth authType) throws IOException {
+  String getServerPrincipal(SaslAuth authType) throws IOException {                 // 获取远程服务器的 principal，其将与服务器 principal 进行交叉验证
     KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
     LOG.debug("Get kerberos info proto:" + protocol + " info:" + krbInfo);
     if (krbInfo == null) { // protocol has no support for kerberos
@@ -303,7 +303,7 @@ public class SaslRpcClient {
     // construct server advertised principal for comparision
     String serverPrincipal = new KerberosPrincipal(
         authType.getProtocol() + "/" + authType.getServerId(),
-        KerberosPrincipal.KRB_NT_SRV_HST).getName();
+        KerberosPrincipal.KRB_NT_SRV_HST).getName();                                // server 端传过来的 principal
 
     // use the pattern if defined
     String serverKeyPattern = conf.get(serverKey + ".pattern");
@@ -318,7 +318,7 @@ public class SaslRpcClient {
     } else {
       // check that the server advertised principal matches our conf
       String confPrincipal = SecurityUtil.getServerPrincipal(
-          conf.get(serverKey), serverAddr.getAddress());
+          conf.get(serverKey), serverAddr.getAddress());                            // 客户端配置的 principal
       if (LOG.isDebugEnabled()) {
         LOG.debug("getting serverKey: " + serverKey + " conf value: " + conf.get(serverKey)
             + " principal: " + confPrincipal);
@@ -333,7 +333,7 @@ public class SaslRpcClient {
             "Kerberos principal name does NOT have the expected hostname part: "
                 + confPrincipal);
       }
-      if (!serverPrincipal.equals(confPrincipal)) {
+      if (!serverPrincipal.equals(confPrincipal)) {                                 // Server 端和客户端的 principal 必须一致
         throw new IllegalArgumentException(String.format(
             "Server has invalid Kerberos principal: %s, expecting: %s",
             serverPrincipal, confPrincipal));
@@ -343,17 +343,17 @@ public class SaslRpcClient {
   }
 
   /**
-   * Do client side SASL authentication with server via the given InputStream
-   * and OutputStream
-   * 
-   * @param inS
-   *          InputStream to use
+   * Do client side SASL authentication with server via the given InputStream       // 认证过程：
+   * and OutputStream                                                               // 客户端发送请求，服务端返回 NEGOTIATE
+   *                                                                                // 客户端提取 token，发送 INITIATE，服务端验证后返回 CHALLENGE
+   * @param inS                                                                     // 客户端发送 RESPONSE，与服务端多次 CHALLENGE，直到验证完成
+   *          InputStream to use                                                    // 服务端返回 SUCCESS，表明服务端已经完成对客户端的认证
    * @param outS
    *          OutputStream to use
    * @return AuthMethod used to negotiate the connection
    * @throws IOException
    */
-  public AuthMethod saslConnect(IpcStreams ipcStreams) throws IOException {
+  public AuthMethod saslConnect(IpcStreams ipcStreams) throws IOException {         // 通过给定的输入流和输出流与服务器进行 SASL 验证
     // redefined if/when a SASL negotiation starts, can be queried if the
     // negotiation fails
     authMethod = AuthMethod.SIMPLE;
@@ -362,7 +362,7 @@ public class SaslRpcClient {
     // loop until sasl is complete or a rpc error occurs
     boolean done = false;
     do {
-      ByteBuffer bb = ipcStreams.readResponse();
+      ByteBuffer bb = ipcStreams.readResponse();                                    // 从 ipcStreams 中读取数据，解析数据，进行验证
 
       RpcWritable.Buffer saslPacket = RpcWritable.Buffer.wrap(bb);
       RpcResponseHeaderProto header =
@@ -385,18 +385,18 @@ public class SaslRpcClient {
       // handle sasl negotiation process
       RpcSaslProto.Builder response = null;
       switch (saslMessage.getState()) {
-        case NEGOTIATE: {
+        case NEGOTIATE: {                                                           // 初次通信需要 NEGOTIATE 进行验证
           // create a compatible SASL client, throws if no supported auths
           SaslAuth saslAuthType = selectSaslClient(saslMessage.getAuthsList());
           // define auth being attempted, caller can query if connect fails
           authMethod = AuthMethod.valueOf(saslAuthType.getMethod());
           
           byte[] responseToken = null;
-          if (authMethod == AuthMethod.SIMPLE) { // switching to SIMPLE
+          if (authMethod == AuthMethod.SIMPLE) { // switching to SIMPLE             // 如果没有安全认证，则不需要进行认证，直接返回
             done = true; // not going to wait for success ack
           } else {
             byte[] challengeToken = null;
-            if (saslAuthType.hasChallenge()) {
+            if (saslAuthType.hasChallenge()) {                                      // 如果服务端有验证信息，则提取 token，如果没有则初始化 token
               // server provided the first challenge
               challengeToken = saslAuthType.getChallenge().toByteArray();
               saslAuthType =
@@ -412,17 +412,17 @@ public class SaslRpcClient {
           response.addAuths(saslAuthType);
           break;
         }
-        case CHALLENGE: {
+        case CHALLENGE: {                                                           // 服务器与客户端之间会进行多次 CHALLENGE 通信以验证客户端
           if (saslClient == null) {
             // should probably instantiate a client to allow a server to
             // demand a specific negotiation
             throw new SaslException("Server sent unsolicited challenge");
           }
-          byte[] responseToken = saslEvaluateToken(saslMessage, false);
+          byte[] responseToken = saslEvaluateToken(saslMessage, false);             // 获取服务端发送的 token，以便继续进行验证
           response = createSaslReply(SaslState.RESPONSE, responseToken);
           break;
         }
-        case SUCCESS: {
+        case SUCCESS: {                                                             // 服务器返回验证成功的消息，则验证过程结束
           // simple server sends immediate success to a SASL client for
           // switch to simple
           if (saslClient == null) {
@@ -451,7 +451,7 @@ public class SaslRpcClient {
       LOG.debug("Sending sasl message "+message);
     }
     ResponseBuffer buf = new ResponseBuffer();
-    saslHeader.writeDelimitedTo(buf);
+    saslHeader.writeDelimitedTo(buf);                                               // 先写 saslHeader，再写消息，最后 flush
     message.writeDelimitedTo(buf);
     synchronized (out) {
       buf.writeTo(out);
@@ -472,9 +472,9 @@ public class SaslRpcClient {
    * @throws SaslException - any problems with negotiation
    */
   private byte[] saslEvaluateToken(RpcSaslProto saslResponse,
-      boolean serverIsDone) throws SaslException {
+      boolean serverIsDone) throws SaslException {                                  // 验证服务器 challenge，如果服务器验证未完成，则必须提供 token
     byte[] saslToken = null;
-    if (saslResponse.hasToken()) {
+    if (saslResponse.hasToken()) {                                                  // 该 token 用于下次发起验证请求，如果验证完成则可以不提供 token
       saslToken = saslResponse.getToken().toByteArray();
       saslToken = saslClient.evaluateChallenge(saslToken);
     } else if (!serverIsDone) {
@@ -495,7 +495,7 @@ public class SaslRpcClient {
   }
 
   private RpcSaslProto.Builder createSaslReply(SaslState state,
-                                               byte[] responseToken) {
+                                               byte[] responseToken) {              // 根据 responseToken 创建 SaslReply
     RpcSaslProto.Builder response = RpcSaslProto.newBuilder();
     response.setState(state);
     if (responseToken != null) {
@@ -504,7 +504,7 @@ public class SaslRpcClient {
     return response;
   }
 
-  private boolean useWrap() {
+  private boolean useWrap() {                                                       // 默认配置不对数据流进行包装
     // getNegotiatedProperty throws if client isn't complete
     String qop = (String) saslClient.getNegotiatedProperty(Sasl.QOP);
     // SASL wrapping is only used if the connection has a QOP, and
@@ -550,7 +550,7 @@ public class SaslRpcClient {
 
   // ideally this should be folded into the RPC decoding loop but it's
   // currently split across Client and SaslRpcClient...
-  class WrappedInputStream extends FilterInputStream {
+  class WrappedInputStream extends FilterInputStream {                              // 如果输入流需要包装，则通过这个类包装输入流数据
     private ByteBuffer unwrappedRpcBuffer = ByteBuffer.allocate(0);
     public WrappedInputStream(InputStream in) throws IOException {
       super(in);
@@ -618,7 +618,7 @@ public class SaslRpcClient {
     }
   }
 
-  class WrappedOutputStream extends FilterOutputStream {
+  class WrappedOutputStream extends FilterOutputStream {                            // 如果输出流需要包装，则用这个类来包装
     public WrappedOutputStream(OutputStream out) throws IOException {
       super(out);
     }
@@ -644,7 +644,7 @@ public class SaslRpcClient {
     }
   }
 
-  private static class SaslClientCallbackHandler implements CallbackHandler {
+  private static class SaslClientCallbackHandler implements CallbackHandler {       // SaslClient 回调函数
     private final String userName;
     private final char[] userPassword;
 

@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface IdMappingServiceProvider {
+public interface IdMappingServiceProvider {                                         // userid <--> username, groupid <--> groupname 映射的接口
 
   // Return uid for given user name
   public int getUid(String user) throws IOException;

@@ -43,7 +43,7 @@ public class SaslPlainServer implements SaslServer {
     }
   }
 
-  public static class SaslPlainServerFactory implements SaslServerFactory {
+  public static class SaslPlainServerFactory implements SaslServerFactory {         // 创建 SaslServer 的工厂类
     @Override
     public SaslServer createSaslServer(String mechanism, String protocol,
         String serverName, Map<String,?> props, CallbackHandler cbh)

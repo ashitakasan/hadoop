@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * The behavior can be configured using a bunch of configuration parameters.
  *
  */
-public class WhitelistBasedResolver extends SaslPropertiesResolver {
+public class WhitelistBasedResolver extends SaslPropertiesResolver {                // SASL 属性解析器的一个实现，提供 IP 白名单 ( Unused)
   public static final Logger LOG =
       LoggerFactory.getLogger(WhitelistBasedResolver.class);
 

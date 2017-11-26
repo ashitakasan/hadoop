@@ -32,11 +32,11 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-class User implements Principal {
+class User implements Principal {                                                   // 将用户名保存为一个 principal
   private final String fullName;
   private final String shortName;
-  private volatile AuthenticationMethod authMethod = null;
-  private volatile LoginContext login = null;
+  private volatile AuthenticationMethod authMethod = null;                          // 用户验证方式
+  private volatile LoginContext login = null;                                       // 用户的 JAAS 的 LoginContext
   private volatile long lastLogin = 0;
 
   public User(String name) {

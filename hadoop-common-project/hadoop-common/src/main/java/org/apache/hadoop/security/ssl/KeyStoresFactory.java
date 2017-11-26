@@ -32,7 +32,7 @@ import java.security.GeneralSecurityException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface KeyStoresFactory extends Configurable {
+public interface KeyStoresFactory extends Configurable {                            // 提供访问 KeyManager 和 TrustManager 的接口
 
   /**
    * Initializes the keystores of the factory.
@@ -48,20 +48,20 @@ public interface KeyStoresFactory extends Configurable {
   /**
    * Releases any resources being used.
    */
-  public void destroy();
+  public void destroy();                                                            // 释放所有正在使用的资源
 
   /**
    * Returns the keymanagers for owned certificates.
    *
    * @return the keymanagers for owned certificates.
    */
-  public KeyManager[] getKeyManagers();
+  public KeyManager[] getKeyManagers();                                             // 返回拥有证书的 key managers
 
   /**
    * Returns the trustmanagers for trusted certificates.
    *
    * @return the trustmanagers for trusted certificates.
    */
-  public TrustManager[] getTrustManagers();
+  public TrustManager[] getTrustManagers();                                         // 返回可信任证书的 trust managers
 
 }

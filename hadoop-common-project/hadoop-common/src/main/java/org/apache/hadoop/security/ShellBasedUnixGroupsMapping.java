@@ -166,17 +166,17 @@ public class ShellBasedUnixGroupsMapping extends Configured
    *         group is returned first.
    * @throws IOException if encounter any error when running the command
    */
-  private List<String> getUnixGroups(String user) throws IOException {
+  private List<String> getUnixGroups(String user) throws IOException {              // 通过调用 `groups` 命令获取用户所属的组
     ShellCommandExecutor executor = createGroupExecutor(user);
 
     List<String> groups;
     try {
       executor.execute();
-      groups = resolveFullGroupNames(executor.getOutput());
+      groups = resolveFullGroupNames(executor.getOutput());                         // 解析返回的所有的组名
     } catch (ExitCodeException e) {
       try {
         groups = resolvePartialGroupNames(user, e.getMessage(),
-            executor.getOutput());
+            executor.getOutput());                                                  // 如果调用出错，则仅解析部分组名
       } catch (PartialGroupNameException pge) {
         LOG.warn("unable to return groups for user {}", user, pge);
         return EMPTY_GROUPS;
@@ -262,7 +262,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
    * @throws PartialGroupNameException if the resolution fails or times out
    */
   private List<String> resolvePartialGroupNames(String userName,
-      String errMessage, String groupNames) throws PartialGroupNameException {
+      String errMessage, String groupNames) throws PartialGroupNameException {      // 尝试解析返回的部分组名
     // Exception may indicate that some group names are not resolvable.
     // Shell-based implementation should tolerate unresolvable groups names,
     // and return resolvable ones, similar to what JNI-based implementation
@@ -309,7 +309,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
    * @return a linked list of group names
    */
   @VisibleForTesting
-  protected List<String> resolveFullGroupNames(String groupNames) {
+  protected List<String> resolveFullGroupNames(String groupNames) {                 // 将返回的组名拆分为一个列表
     StringTokenizer tokenizer =
         new StringTokenizer(groupNames, Shell.TOKEN_SEPARATOR_REGEX);
     List<String> groups = new LinkedList<String>();

@@ -64,7 +64,7 @@ public class JniBasedUnixGroupsMapping implements GroupMappingServiceProvider {
    *
    * @return                   The set of groups associated with a user.
    */
-  native static String[] getGroupsForUser(String username);
+  native static String[] getGroupsForUser(String username);                         // 获取指定用户所属的所有组
 
   /**
    * Log an error message about a group.  Used from JNI.

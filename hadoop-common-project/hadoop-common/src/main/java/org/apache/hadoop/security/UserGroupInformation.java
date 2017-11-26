@@ -163,7 +163,7 @@ public class UserGroupInformation {
    * adds the corresponding UserName.
    */
   @InterfaceAudience.Private
-  public static class HadoopLoginModule implements LoginModule {
+  public static class HadoopLoginModule implements LoginModule {                    // Hadoop 自定义的 JAAS LoginModule
     private Subject subject;
 
     @Override
@@ -192,7 +192,7 @@ public class UserGroupInformation {
       }
       Principal user = null;
       // if we are using kerberos, try it out
-      if (isAuthenticationMethodEnabled(AuthenticationMethod.KERBEROS)) {
+      if (isAuthenticationMethodEnabled(AuthenticationMethod.KERBEROS)) {           // 如果开启了 KERBEROS，尝试获取 KERBEROS 的 Principal(即 User)
         user = getCanonicalUser(KerberosPrincipal.class);
         if (LOG.isDebugEnabled()) {
           LOG.debug("using kerberos user:"+user);
@@ -200,7 +200,7 @@ public class UserGroupInformation {
       }
       //If we don't have a kerberos user and security is disabled, check
       //if user is specified in the environment or properties
-      if (!isSecurityEnabled() && (user == null)) {
+      if (!isSecurityEnabled() && (user == null)) {                                 // 如果没有开启 KERBEROS 并且未开启安全认证，则从环境变量中获取
         String envUser = System.getenv(HADOOP_USER_NAME);
         if (envUser == null) {
           envUser = System.getProperty(HADOOP_USER_NAME);
@@ -230,7 +230,7 @@ public class UserGroupInformation {
           LOG.debug("User entry: \"" + userEntry.toString() + "\"" );
         }
 
-        subject.getPrincipals().add(userEntry);
+        subject.getPrincipals().add(userEntry);                                     // 在 subject 加入当前需要认证的用户
         return true;
       }
       LOG.error("Can't find user in " + subject);
@@ -268,13 +268,13 @@ public class UserGroupInformation {
   }
 
   /** Metrics to track UGI activity */
-  static UgiMetrics metrics = UgiMetrics.create();
+  static UgiMetrics metrics = UgiMetrics.create();                                  // UGI 验证指标
   /** The auth method to use */
-  private static AuthenticationMethod authenticationMethod;
+  private static AuthenticationMethod authenticationMethod;                         // 当前系统配置的验证方法
   /** Server-side groups fetching service */
-  private static Groups groups;
+  private static Groups groups;                                                     // 服务器端 用户 <--> 组 的映射服务
   /** Min time (in seconds) before relogin for Kerberos */
-  private static long kerberosMinSecondsBeforeRelogin;
+  private static long kerberosMinSecondsBeforeRelogin;                              // kerberos 需要重新认证的最小时间，默认 1 min
   /** The configuration to use */
 
   /*
@@ -284,11 +284,11 @@ public class UserGroupInformation {
    * -  no renewal thread will be created to do the renew credential
    * -  reloginFromKeytab() and reloginFromTicketCache will not renew
    *    credential.
-   * and it assumes that the owner of the subject to renew; if false, it means
+   * and it assumes that the owner of the subject to renew; if false, it means      // true 意味着需要 subject 的所有者自己的 renew
    * to retain the old behavior prior to fixing HADOOP-13558 and HADOOP-13805.
    * The default is false.
    */
-  private static boolean treatSubjectExternal = false;
+  private static boolean treatSubjectExternal = false;                              // if true，renew 证书时不会创建新的线程，relogin 不会 renew 证书
 
   /*
    * Some test need the renewal thread to be created even if it does
@@ -325,11 +325,11 @@ public class UserGroupInformation {
    * @param conf the configuration to use
    */
   private static synchronized void initialize(Configuration conf,
-                                              boolean overrideNameRules) {
+                                              boolean overrideNameRules) {          // 初始化 UGI 即相关的类
     authenticationMethod = SecurityUtil.getAuthenticationMethod(conf);
     if (overrideNameRules || !HadoopKerberosName.hasRulesBeenSet()) {
       try {
-        HadoopKerberosName.setConfiguration(conf);
+        HadoopKerberosName.setConfiguration(conf);                                  // 初始化 Hadoop Kerveros 配置
       } catch (IOException ioe) {
         throw new RuntimeException(
             "Problem with Kerberos auth_to_local name configuration", ioe);
@@ -417,7 +417,7 @@ public class UserGroupInformation {
    * 
    * @return true if UGI is working in a secure environment
    */
-  public static boolean isSecurityEnabled() {
+  public static boolean isSecurityEnabled() {                                       // 确定用户组信息验证是使用 Kerberos 还是 SIMPLE
     return !isAuthenticationMethodEnabled(AuthenticationMethod.SIMPLE);
   }
   
@@ -431,19 +431,19 @@ public class UserGroupInformation {
   /**
    * Information about the logged in user.
    */
-  private static UserGroupInformation loginUser = null;
+  private static UserGroupInformation loginUser = null;                             // 记录当前登陆的用户
   private static String keytabPrincipal = null;
   private static String keytabFile = null;
 
   private final Subject subject;
   // All non-static fields must be read-only caches that come from the subject.
-  private final User user;
+  private final User user;                                                          // new UGI 时，从 subject 中取出的几个只读字段
   private final boolean isKeytab;
   private final boolean isKrbTkt;
   private final boolean isLoginExternal;
   
-  private static String OS_LOGIN_MODULE_NAME;
-  private static Class<? extends Principal> OS_PRINCIPAL_CLASS;
+  private static String OS_LOGIN_MODULE_NAME;                                       // 一般默认为 UnixLoginModule
+  private static Class<? extends Principal> OS_PRINCIPAL_CLASS;                     // 一般默认为 UnixPrincipal
   
   private static final boolean windows =
       System.getProperty("os.name").startsWith("Windows");
@@ -453,7 +453,7 @@ public class UserGroupInformation {
   private static final boolean aix = System.getProperty("os.name").equals("AIX");
 
   /* Return the OS login module class name */
-  private static String getOSLoginModuleName() {
+  private static String getOSLoginModuleName() {                                    // 获取当前 OS 支持的 LoginModule
     if (IBM_JAVA) {
       if (windows) {
         return is64Bit ? "com.ibm.security.auth.module.Win64LoginModule"
@@ -472,7 +472,7 @@ public class UserGroupInformation {
 
   /* Return the OS principal class */
   @SuppressWarnings("unchecked")
-  private static Class<? extends Principal> getOsPrincipalClass() {
+  private static Class<? extends Principal> getOsPrincipalClass() {                 // 获取当前 OS 支持的 Principal
     ClassLoader cl = ClassLoader.getSystemClassLoader();
     try {
       String principalClass = null;
@@ -546,7 +546,7 @@ public class UserGroupInformation {
    * to use for login.
    */
   private static class HadoopConfiguration 
-      extends javax.security.auth.login.Configuration {
+      extends javax.security.auth.login.Configuration {                             // 定义了特定 app 的 LoginModule
     private static final String SIMPLE_CONFIG_NAME = "hadoop-simple";
     private static final String USER_KERBEROS_CONFIG_NAME = 
       "hadoop-user-kerberos";
@@ -624,7 +624,7 @@ public class UserGroupInformation {
       new AppConfigurationEntry[]{KEYTAB_KERBEROS_LOGIN, HADOOP_LOGIN};
 
     @Override
-    public AppConfigurationEntry[] getAppConfigurationEntry(String appName) {
+    public AppConfigurationEntry[] getAppConfigurationEntry(String appName) {       // 配置了指定 app 的 AppConfigurationEntry，其中包含 LoginModule
       if (SIMPLE_CONFIG_NAME.equals(appName)) {
         return SIMPLE_CONF;
       } else if (USER_KERBEROS_CONFIG_NAME.equals(appName)) {
@@ -668,13 +668,13 @@ public class UserGroupInformation {
   private static LoginContext
   newLoginContext(String appName, Subject subject,
     javax.security.auth.login.Configuration loginConf)
-      throws LoginException {
+      throws LoginException {                                                       // 创建当前线程下的 LoginContext
     // Temporarily switch the thread's ContextClassLoader to match this
     // class's classloader, so that we can properly load HadoopLoginModule
     // from the JAAS libraries.
     Thread t = Thread.currentThread();
     ClassLoader oldCCL = t.getContextClassLoader();
-    t.setContextClassLoader(HadoopLoginModule.class.getClassLoader());
+    t.setContextClassLoader(HadoopLoginModule.class.getClassLoader());              // 暂时切换类加载器以加载 HadoopLoginModule
     try {
       return new LoginContext(appName, subject, null, loginConf);
     } finally {
@@ -682,7 +682,7 @@ public class UserGroupInformation {
     }
   }
 
-  private LoginContext getLogin() {
+  private LoginContext getLogin() {                                                 // 用户登陆信息都保存在 LoginContext 中
     return user.getLogin();
   }
   
@@ -697,7 +697,7 @@ public class UserGroupInformation {
    * The creator of subject is responsible for renewing credentials.
    * @param subject the user's subject
    */
-  UserGroupInformation(Subject subject) {
+  UserGroupInformation(Subject subject) {                                           // 根据 subject 创建 UGI，不会改变 subject，不会获取新的凭证
     this(subject, treatSubjectExternal);
   }
 
@@ -710,7 +710,7 @@ public class UserGroupInformation {
    */
   private UserGroupInformation(Subject subject, final boolean isLoginExternal) {
     this.subject = subject;
-    this.user = subject.getPrincipals(User.class).iterator().next();
+    this.user = subject.getPrincipals(User.class).iterator().next();                // 获取 subject 中的 User，一般为 principal 配置的用户
 
     this.isKeytab = KerberosUtil.hasKerberosKeyTab(subject);
     this.isKrbTkt = KerberosUtil.hasKerberosTicket(subject);
@@ -733,7 +733,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public synchronized
-  static UserGroupInformation getCurrentUser() throws IOException {
+  static UserGroupInformation getCurrentUser() throws IOException {                 // 获取当前线程栈 AccessController 中的用户
     AccessControlContext context = AccessController.getContext();
     Subject subject = Subject.getSubject(context);
     if (subject == null || subject.getPrincipals(User.class).isEmpty()) {
@@ -775,7 +775,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation getUGIFromTicketCache(
-            String ticketCache, String user) throws IOException {
+            String ticketCache, String user) throws IOException {                   // 从 Kerberos ticket 缓存中创建用户 UGI
     if (!isAuthenticationMethodEnabled(AuthenticationMethod.KERBEROS)) {
       return getBestUGI(null, user);
     }
@@ -800,7 +800,7 @@ public class UserGroupInformation {
       DynamicConfiguration dynConf =
           new DynamicConfiguration(new AppConfigurationEntry[]{ ace });
       LoginContext login = newLoginContext(
-          HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, null, dynConf);
+          HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, null, dynConf);            // 创建 LoginContext、login、获取 Subject、检查 Principal
       login.login();
 
       Subject loginSubject = login.getSubject();
@@ -815,7 +815,7 @@ public class UserGroupInformation {
       User ugiUser = new User(loginPrincipals.iterator().next().getName(),
           AuthenticationMethod.KERBEROS, login);
       loginSubject.getPrincipals().add(ugiUser);
-      UserGroupInformation ugi = new UserGroupInformation(loginSubject, false);
+      UserGroupInformation ugi = new UserGroupInformation(loginSubject, false);     // 创建 KERBEROS User、创建 UGI、设置 KERBEROS 验证方式
       ugi.setLogin(login);
       ugi.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
       return ugi;
@@ -839,7 +839,7 @@ public class UserGroupInformation {
    * @throws KerberosAuthException if the kerberos login fails
    */
   public static UserGroupInformation getUGIFromSubject(Subject subject)
-      throws IOException {
+      throws IOException {                                                          // 根据 subject 创建 UGI，这里没有 LoginContext
     if (subject == null) {
       throw new KerberosAuthException(SUBJECT_MUST_NOT_BE_NULL);
     }
@@ -868,7 +868,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public synchronized 
-  static UserGroupInformation getLoginUser() throws IOException {
+  static UserGroupInformation getLoginUser() throws IOException {                   // 获取当前登陆的用户，没有则以 null 的 Subject 创建
     if (loginUser == null) {
       loginUserFromSubject(null);
     }
@@ -903,7 +903,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public synchronized 
-  static void loginUserFromSubject(Subject subject) throws IOException {
+  static void loginUserFromSubject(Subject subject) throws IOException {            // 根据 subject 的信息创建和配置 loginUser
     ensureInitialized();
     boolean externalSubject = false;
     try {
@@ -919,7 +919,7 @@ public class UserGroupInformation {
       }
       LoginContext login =
           newLoginContext(authenticationMethod.getLoginAppName(), 
-                          subject, new HadoopConfiguration());
+                          subject, new HadoopConfiguration());                      // 创建 LoginContext，默认认证方式为 SIMPLE
       login.login();
 
       UserGroupInformation realUser =
@@ -928,11 +928,11 @@ public class UserGroupInformation {
       realUser.setAuthenticationMethod(authenticationMethod);
       // If the HADOOP_PROXY_USER environment variable or property
       // is specified, create a proxy user as the logged in user.
-      String proxyUser = System.getenv(HADOOP_PROXY_USER);
+      String proxyUser = System.getenv(HADOOP_PROXY_USER);                          // 从环境变量中获取 proxy User，如果非空，则登陆 proxy User
       if (proxyUser == null) {
         proxyUser = System.getProperty(HADOOP_PROXY_USER);
       }
-      loginUser = proxyUser == null ? realUser : createProxyUser(proxyUser, realUser);
+      loginUser = proxyUser == null ? realUser : createProxyUser(proxyUser, realUser);  // 如果 HADOOP_PROXY_USER 非空，则创建 realUser 的代理用户
 
       String tokenFileLocation = System.getProperty(HADOOP_TOKEN_FILES);
       if (tokenFileLocation == null) {
@@ -974,7 +974,7 @@ public class UserGroupInformation {
         LOG.debug("Loaded {} tokens", cred.numberOfTokens());
         loginUser.addCredentials(cred);
       }
-      loginUser.spawnAutoRenewalThreadForUserCreds();
+      loginUser.spawnAutoRenewalThreadForUserCreds();                               // 定期 renew 用户凭证
     } catch (LoginException le) {
       LOG.debug("failure to login", le);
       throw new KerberosAuthException(FAILURE_TO_LOGIN, le);
@@ -1005,7 +1005,7 @@ public class UserGroupInformation {
    * Get the Kerberos TGT
    * @return the user's TGT or null if none was found
    */
-  private synchronized KerberosTicket getTGT() {
+  private synchronized KerberosTicket getTGT() {                                    // 从 subject 中获取 TGT (Ticket Granting Ticket)
     Set<KerberosTicket> tickets = subject
         .getPrivateCredentials(KerberosTicket.class);
     for (KerberosTicket ticket : tickets) {
@@ -1016,7 +1016,7 @@ public class UserGroupInformation {
     return null;
   }
   
-  private long getRefreshTime(KerberosTicket tgt) {
+  private long getRefreshTime(KerberosTicket tgt) {                                 // tgt 有效期过了 0.8 后可以开始刷新
     long start = tgt.getStartTime().getTime();
     long end = tgt.getEndTime().getTime();
     return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
@@ -1034,7 +1034,7 @@ public class UserGroupInformation {
   }
 
   /**Spawn a thread to do periodic renewals of kerberos credentials*/
-  private void spawnAutoRenewalThreadForUserCreds() {
+  private void spawnAutoRenewalThreadForUserCreds() {                               // 生成一个线程来执行 kerberos 凭证的定期更新，即执行 kinit
     if (getEnableRenewThreadCreationForTest()) {
       LOG.warn("Spawning thread to auto renew user credential since " +
           " enableRenewThreadCreationForTest was set to true.");
@@ -1068,7 +1068,7 @@ public class UserGroupInformation {
             if (LOG.isDebugEnabled()) {
               LOG.debug("renewed ticket");
             }
-            reloginFromTicketCache();
+            reloginFromTicketCache();                                               // 从 ticket cache 重新登陆用户
             tgt = getTGT();
             if (tgt == null) {
               LOG.warn("No TGT after renewal. Aborting renew thread for " +
@@ -1132,7 +1132,7 @@ public class UserGroupInformation {
    */
   @VisibleForTesting
   static long getNextTgtRenewalTime(final long tgtEndTime, final long now,
-      final RetryPolicy rp) throws Exception {
+      final RetryPolicy rp) throws Exception {                                      // 获取下一次需要 renew TGT 的时间
     final long lastRetryTime = tgtEndTime - kerberosMinSecondsBeforeRelogin;
     final RetryPolicy.RetryAction ra = rp.shouldRetry(null,
         metrics.renewalFailures.value(), 0, false);
@@ -1152,7 +1152,7 @@ public class UserGroupInformation {
   public synchronized
   static void loginUserFromKeytab(String user,
                                   String path
-                                  ) throws IOException {
+                                  ) throws IOException {                            // 从 keytab 文件登陆一个用户，将其设置为 loginUser
     if (!isSecurityEnabled())
       return;
 
@@ -1163,7 +1163,7 @@ public class UserGroupInformation {
     long start = 0;
     try {
       login = newLoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME,
-            subject, new HadoopConfiguration());
+            subject, new HadoopConfiguration());                                    // 以 keytab 创建 LoginContext、login、创建 UGI、设置 loginUser
       start = Time.now();
       login.login();
       metrics.loginSuccess.add(Time.now() - start);
@@ -1194,7 +1194,7 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public void logoutUserFromKeytab() throws IOException {
+  public void logoutUserFromKeytab() throws IOException {                           // 从 keytab 文件注销一个用户
     if (!isSecurityEnabled() ||
         user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS) {
       return;
@@ -1228,7 +1228,7 @@ public class UserGroupInformation {
    * @throws IOException
    * @throws KerberosAuthException if it's a kerberos login exception.
    */
-  public synchronized void checkTGTAndReloginFromKeytab() throws IOException {
+  public synchronized void checkTGTAndReloginFromKeytab() throws IOException {      // 如果 TGT 过期或即将到期，则从 keytab 重新登录用户
     if (!isSecurityEnabled()
         || user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS
         || !isKeytab) {
@@ -1246,7 +1246,7 @@ public class UserGroupInformation {
   // the kerberos library of jdk always use the first kerberos ticket as TGT.
   // See HADOOP-13433 for more details.
   @VisibleForTesting
-  void fixKerberosTicketOrder() {
+  void fixKerberosTicketOrder() {                                                   // 重新排序 kerberos ticket，保证第一个是 TGT
     Set<Object> creds = getSubject().getPrivateCredentials();
     synchronized (creds) {
       for (Iterator<Object> iter = creds.iterator(); iter.hasNext();) {
@@ -1260,7 +1260,7 @@ public class UserGroupInformation {
                 ticket.getServer());
             iter.remove();
             try {
-              ticket.destroy();
+              ticket.destroy();                                                     // remove 并 destroy 不需要的 KerberosTicket
             } catch (DestroyFailedException e) {
               LOG.warn("destroy ticket failed", e);
             }
@@ -1285,7 +1285,7 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public synchronized void reloginFromKeytab() throws IOException {
+  public synchronized void reloginFromKeytab() throws IOException {                 // 从 keytab 重新登陆当前 subject 中的用户（TGT 已过期）
     if (!shouldRelogin() || !isKeytab) {
       return;
     }
@@ -1302,7 +1302,7 @@ public class UserGroupInformation {
       return;
     }
 
-    LoginContext login = getLogin();
+    LoginContext login = getLogin();                                                // 获取当前 LoginContext、重置登陆时间、logout
     if (login == null || keytabFile == null) {
       throw new KerberosAuthException(MUST_FIRST_LOGIN_FROM_KEYTAB);
     }
@@ -1323,7 +1323,7 @@ public class UserGroupInformation {
         // have the new credentials (pass it to the LoginContext constructor)
         login = newLoginContext(
             HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, getSubject(),
-            new HadoopConfiguration());
+            new HadoopConfiguration());                                             // 以当前 Subject 创建 LoginContext、login、设置 LoginContext
         if (LOG.isDebugEnabled()) {
           LOG.debug("Initiating re-login for " + keytabPrincipal);
         }
@@ -1354,7 +1354,7 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public synchronized void reloginFromTicketCache() throws IOException {
+  public synchronized void reloginFromTicketCache() throws IOException {            // 从 ticket cache 重新登陆用户（用户信息未过期）
     if (!shouldRelogin() || !isKrbTkt) {
       return;
     }
@@ -1367,7 +1367,7 @@ public class UserGroupInformation {
       return;
     }
     // register most recent relogin attempt
-    user.setLastLogin(now);
+    user.setLastLogin(now);                                                         // 重置登陆时间、logout、根据 Subject 创建 LoginContext、login
     try {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Initiating logout for " + getUserName());
@@ -1405,7 +1405,7 @@ public class UserGroupInformation {
   public synchronized
   static UserGroupInformation loginUserFromKeytabAndReturnUGI(String user,
                                   String path
-                                  ) throws IOException {
+                                  ) throws IOException {                            // 从 keytab 登陆用户并返回 UGI，不会影响当前已经登陆的用户
     if (!isSecurityEnabled())
       return UserGroupInformation.getCurrentUser();
     String oldKeytabFile = null;
@@ -1417,7 +1417,7 @@ public class UserGroupInformation {
       oldKeytabPrincipal = keytabPrincipal;
       keytabFile = path;
       keytabPrincipal = user;
-      Subject subject = new Subject();
+      Subject subject = new Subject();                                              // 创建 Subject、创建 LoginContext、login、创建 UGI
       
       LoginContext login = newLoginContext(
           HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject,
@@ -1446,7 +1446,7 @@ public class UserGroupInformation {
     }
   }
 
-  private boolean hasSufficientTimeElapsed(long now) {
+  private boolean hasSufficientTimeElapsed(long now) {                              // 当前用户是否还有足够的过期时间
     if (now - user.getLastLogin() < kerberosMinSecondsBeforeRelogin ) {
       LOG.warn("Not attempting to re-login since the last re-login was " +
           "attempted less than " + (kerberosMinSecondsBeforeRelogin/1000) +
@@ -1482,7 +1482,7 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public static UserGroupInformation createRemoteUser(String user) {
+  public static UserGroupInformation createRemoteUser(String user) {                // 从登录名创建用户，主要是为 remote user 使用 RPC，不需要凭证
     return createRemoteUser(user, AuthMethod.SIMPLE);
   }
   
@@ -1494,7 +1494,7 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public static UserGroupInformation createRemoteUser(String user, AuthMethod authMethod) {
+  public static UserGroupInformation createRemoteUser(String user, AuthMethod authMethod) {   // 创建 remote user，主要用户 RPC，不需要 credentials
     if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
@@ -1510,7 +1510,7 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public enum AuthenticationMethod {
+  public enum AuthenticationMethod {                                                // 用户信息的认证方式，默认为 SIMPLE
     // currently we support only one auth per method, but eventually a 
     // subtype is needed to differentiate, ex. if digest is token or ldap
     SIMPLE(AuthMethod.SIMPLE,
@@ -1566,7 +1566,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation createProxyUser(String user,
-      UserGroupInformation realUser) {
+      UserGroupInformation realUser) {                                              // 创建 realUser 的代理用户 user，认证类型为 PROXY
     if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
@@ -1588,7 +1588,7 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public UserGroupInformation getRealUser() {
+  public UserGroupInformation getRealUser() {                                       // 使用代理用户运行，用于获取 subject 中的 realUser
     for (RealUser p: subject.getPrincipals(RealUser.class)) {
       return p.getRealUser();
     }
@@ -1601,7 +1601,7 @@ public class UserGroupInformation {
    * This class is used for storing the groups for testing. It stores a local
    * map that has the translation of usernames to groups.
    */
-  private static class TestingGroups extends Groups {
+  private static class TestingGroups extends Groups {                               // 测试用的 Groups 服务，包含一个 user <--> groups 的 Map
     private final Map<String, List<String>> userToGroupsMapping = 
       new HashMap<String,List<String>>();
     private Groups underlyingImplementation;
@@ -1708,7 +1708,7 @@ public class UserGroupInformation {
    *          tokenIdentifier to be added
    * @return true on successful add of new tokenIdentifier
    */
-  public synchronized boolean addTokenIdentifier(TokenIdentifier tokenId) {
+  public synchronized boolean addTokenIdentifier(TokenIdentifier tokenId) {         // 向当前 UGI 添加一个 TokenIdentifier，它一般是 RPC 验证的
     return subject.getPublicCredentials().add(tokenId);
   }
 
@@ -1738,7 +1738,7 @@ public class UserGroupInformation {
    * @param token Token to be added
    * @return true on successful add of new token
    */
-  public boolean addToken(Text alias, Token<? extends TokenIdentifier> token) {
+  public boolean addToken(Text alias, Token<? extends TokenIdentifier> token) {     // 为当前用户添加一个 Token
     synchronized (subject) {
       getCredentialsInternal().addToken(alias, token);
       return true;
@@ -1750,7 +1750,7 @@ public class UserGroupInformation {
    * 
    * @return an unmodifiable collection of tokens associated with user
    */
-  public Collection<Token<? extends TokenIdentifier>> getTokens() {
+  public Collection<Token<? extends TokenIdentifier>> getTokens() {                 // 获取当前用户 Credentials 中所有的 Token
     synchronized (subject) {
       return Collections.unmodifiableCollection(
           new ArrayList<Token<?>>(getCredentialsInternal().getAllTokens()));
@@ -1762,7 +1762,7 @@ public class UserGroupInformation {
    * 
    * @return Credentials of tokens associated with this user
    */
-  public Credentials getCredentials() {
+  public Credentials getCredentials() {                                             // 获取与该用户关联的 Credentials，移除了私有的 Token
     synchronized (subject) {
       Credentials creds = new Credentials(getCredentialsInternal());
       Iterator<Token<?>> iter = creds.getAllTokens().iterator();
@@ -1785,7 +1785,7 @@ public class UserGroupInformation {
     }
   }
 
-  private synchronized Credentials getCredentialsInternal() {
+  private synchronized Credentials getCredentialsInternal() {                       // 获取当前用户的 Credentials
     final Credentials credentials;
     final Set<Credentials> credentialsSet =
       subject.getPrivateCredentials(Credentials.class);
@@ -1814,7 +1814,7 @@ public class UserGroupInformation {
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.
    */
-  public List<String> getGroups() {
+  public List<String> getGroups() {                                                 // 获取当前用户所有的组的名称
     ensureInitialized();
     try {
       return groups.getGroups(getShortUserName());
@@ -1875,7 +1875,7 @@ public class UserGroupInformation {
    * 
    * @return AuthenticationMethod in the subject, null if not present.
    */
-  public synchronized AuthenticationMethod getRealAuthenticationMethod() {
+  public synchronized AuthenticationMethod getRealAuthenticationMethod() {          // 获取 realUser 的 subject 的认证方法
     UserGroupInformation ugi = getRealUser();
     if (ugi == null) {
       ugi = this;
@@ -1891,7 +1891,7 @@ public class UserGroupInformation {
    * @return AuthenticationMethod
    */
   public static AuthenticationMethod getRealAuthenticationMethod(
-      UserGroupInformation ugi) {
+      UserGroupInformation ugi) {                                                   // 返回 ugi 的身份认证方法，如果是代理，则返回真实用户的身份认证方法
     AuthenticationMethod authMethod = ugi.getAuthenticationMethod();
     if (authMethod == AuthenticationMethod.PROXY) {
       authMethod = ugi.getRealUser().getAuthenticationMethod();
@@ -1937,7 +1937,7 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public <T> T doAs(PrivilegedAction<T> action) {
+  public <T> T doAs(PrivilegedAction<T> action) {                                   // 以当前 user 的 subject 执行 action
     logPrivilegedAction(subject, action);
     return Subject.doAs(subject, action);
   }
@@ -1956,7 +1956,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public <T> T doAs(PrivilegedExceptionAction<T> action
-                    ) throws IOException, InterruptedException {
+                    ) throws IOException, InterruptedException {                    // 以当前 user 的 subject 执行 action，可能抛出异常
     try {
       logPrivilegedAction(subject, action);
       return Subject.doAs(subject, action);

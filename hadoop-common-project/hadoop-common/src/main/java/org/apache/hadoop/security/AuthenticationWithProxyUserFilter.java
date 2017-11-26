@@ -40,7 +40,7 @@ import java.util.List;
  * contains doAs parameter, then check the proxy user,
  * otherwise do the next filter.
  */
-public class AuthenticationWithProxyUserFilter extends AuthenticationFilter {
+public class AuthenticationWithProxyUserFilter extends AuthenticationFilter {       // 扩展 AuthenticationFilter 的功能，以支持授权代理用户
 
   public static final Logger LOG =
       LoggerFactory.getLogger(AuthenticationWithProxyUserFilter.class);

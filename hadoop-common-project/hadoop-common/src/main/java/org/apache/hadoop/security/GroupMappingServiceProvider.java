@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
- * An interface for the implementation of a user-to-groups mapping service
+ * An interface for the implementation of a user-to-groups mapping service          // user 到 group 的映射服务
  * used by {@link Groups}.
  */
 @InterfaceAudience.Public
@@ -40,16 +40,16 @@ public interface GroupMappingServiceProvider {
    * @return group memberships of user
    * @throws IOException
    */
-  public List<String> getGroups(String user) throws IOException;
+  public List<String> getGroups(String user) throws IOException;                    // 获取给定用户的所有组信息
   /**
    * Refresh the cache of groups and user mapping
    * @throws IOException
    */
-  public void cacheGroupsRefresh() throws IOException;
+  public void cacheGroupsRefresh() throws IOException;                              // 刷新组和用户的映射关系
   /**
    * Caches the group user information
    * @param groups list of groups to add to cache
    * @throws IOException
    */
-  public void cacheGroupsAdd(List<String> groups) throws IOException;
+  public void cacheGroupsAdd(List<String> groups) throws IOException;               // 缓存用户组信息
 }

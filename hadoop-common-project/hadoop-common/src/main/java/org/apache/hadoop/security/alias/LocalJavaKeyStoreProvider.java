@@ -48,7 +48,7 @@ import java.util.EnumSet;
  */
 @InterfaceAudience.Private
 public final class LocalJavaKeyStoreProvider extends
-    AbstractJavaKeyStoreProvider {
+    AbstractJavaKeyStoreProvider {                                                  // 基于 Java 的密钥存储文件格式。该文件只能存储在本地文件系统中
   public static final String SCHEME_NAME = "localjceks";
   private File file;
   private Set<PosixFilePermission> permissions;
@@ -169,7 +169,7 @@ public final class LocalJavaKeyStoreProvider extends
   /**
    * The factory to create JksProviders, which is used by the ServiceLoader.
    */
-  public static class Factory extends CredentialProviderFactory {
+  public static class Factory extends CredentialProviderFactory {                   // LocalJavaKeyStoreProvider 的工厂类
     @Override
     public CredentialProvider createProvider(URI providerName,
         Configuration conf) throws IOException {

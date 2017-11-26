@@ -235,7 +235,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * @param thePublicService the public service name
    * @return false always for non-private tokens
    */
-  public boolean isPrivateCloneOf(Text thePublicService) {
+  public boolean isPrivateCloneOf(Text thePublicService) {                          // 是否是 public token 的私有拷贝
     return false;
   }
 

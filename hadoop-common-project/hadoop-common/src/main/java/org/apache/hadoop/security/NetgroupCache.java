@@ -37,7 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public class NetgroupCache {
   private static ConcurrentHashMap<String, Set<String>> userToNetgroupsMap =
-    new ConcurrentHashMap<String, Set<String>>();
+    new ConcurrentHashMap<String, Set<String>>();                                                     // 用户到所属组的缓存，jvm 全局唯一
 
   /**
    * Get netgroups for a given user
@@ -95,7 +95,7 @@ public class NetgroupCache {
    * @param group name of the group to add to cache
    * @param users list of users for a given group
    */
-  public static void add(String group, List<String> users) {
+  public static void add(String group, List<String> users) {                        // 将一个组及组内用户添加到 用户到网络组 缓存
     for (String user : users) {
       Set<String> userGroups = userToNetgroupsMap.get(user);
       // ConcurrentHashMap does not allow null values; 

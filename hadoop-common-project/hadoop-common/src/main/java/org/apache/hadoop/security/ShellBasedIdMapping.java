@@ -46,11 +46,11 @@ import org.slf4j.LoggerFactory;
  * The maps are incrementally updated as described below:
  *   1. Initialize the maps as empty. 
  *   2. Incrementally update the maps
- *      - When ShellBasedIdMapping is requested for user or group name given 
+ *      - When ShellBasedIdMapping is requested for user or group name given        // 如果没有 id <--> name 的缓存，则调用 shell 去获取
  *        an ID, or for ID given a user or group name, do look up in the map
  *        first, if it doesn't exist, find the corresponding entry with shell
  *        command, and insert the entry to the maps.
- *      - When group ID is requested for a given group name, and if the
+ *      - When group ID is requested for a given group name, and if the             // 如果没有 name <--> id 缓存，则调用 shell 去获取
  *        group name is numerical, the full group map is loaded. Because we
  *        don't have a good way to find the entry for a numerical group name,
  *        loading the full map helps to get in all entries.
@@ -90,7 +90,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
   final private long timeout;
   
   // Maps for id to name map. Guarded by this object monitor lock
-  private BiMap<Integer, String> uidNameMap = HashBiMap.create();
+  private BiMap<Integer, String> uidNameMap = HashBiMap.create();                   // 这里使用 BiMap，必要时可以 inverse 以通过 value 查询 key
   private BiMap<Integer, String> gidNameMap = HashBiMap.create();
   private long lastUpdateTime = 0; // Last time maps were updated
 
@@ -157,11 +157,11 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
   }  
 
   synchronized private boolean isExpired() {
-    return Time.monotonicNow() - lastUpdateTime > timeout;
+    return Time.monotonicNow() - lastUpdateTime > timeout;                          // 默认没 15 分钟更新一次，最少 1 分钟
   }
 
   // If can't update the maps, will keep using the old ones
-  private void checkAndUpdateMaps() {
+  private void checkAndUpdateMaps() {                                               // 每次请求用户和组信息前，都要判断是否过期，过期则清空缓存 map
     if (isExpired()) {
       LOG.info("Update cache now");
       try {

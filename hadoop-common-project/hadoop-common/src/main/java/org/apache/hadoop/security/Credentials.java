@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class Credentials implements Writable {
+public class Credentials implements Writable {                                      // 提供读写 secretKey 和 Token 的工具的类
   private static final Logger LOG = LoggerFactory.getLogger(Credentials.class);
 
   private  Map<Text, byte[]> secretKeysMap = new HashMap<Text, byte[]>();
@@ -94,7 +94,7 @@ public class Credentials implements Writable {
    * @param alias the alias for the key
    * @param t the token object
    */
-  public void addToken(Text alias, Token<? extends TokenIdentifier> t) {
+  public void addToken(Text alias, Token<? extends TokenIdentifier> t) {            // 在当前 Credentials 实例中添加一个 Token
     if (t == null) {
       LOG.warn("Null token ignored for " + alias);
     } else if (tokenMap.put(alias, t) != null) {
@@ -147,7 +147,7 @@ public class Credentials implements Writable {
    * @param alias the alias for the key
    * @param key the key bytes
    */
-  public void addSecretKey(Text alias, byte[] key) {
+  public void addSecretKey(Text alias, byte[] key) {                                // 添加密钥到当前 Credentials 实例中
     secretKeysMap.put(alias, key);
   }
 
@@ -200,7 +200,7 @@ public class Credentials implements Writable {
    */
   public static Credentials readTokenStorageFile(File filename,
                                                  Configuration conf)
-      throws IOException {
+      throws IOException {                                                          // 从文件中加载 token 及 secretKey
     DataInputStream in = null;
     Credentials credentials = new Credentials();
     try {
@@ -218,7 +218,7 @@ public class Credentials implements Writable {
   /**
    * Convenience method for reading a token from a DataInputStream.
    */
-  public void readTokenStorageStream(DataInputStream in) throws IOException {
+  public void readTokenStorageStream(DataInputStream in) throws IOException {       // 从输入流中加载 token 及 secretKey
     byte[] magic = new byte[TOKEN_STORAGE_MAGIC.length];
     in.readFully(magic);
     if (!Arrays.equals(magic, TOKEN_STORAGE_MAGIC)) {
@@ -289,7 +289,7 @@ public class Credentials implements Writable {
    * @throws IOException
    */
   @Override
-  public void write(DataOutput out) throws IOException {
+  public void write(DataOutput out) throws IOException {                            // 保存 token 及 secretKey 到 DataOutput 中
     // write out tokens first
     WritableUtils.writeVInt(out, tokenMap.size());
     for(Map.Entry<Text,
@@ -312,7 +312,7 @@ public class Credentials implements Writable {
    * @param out
    * @throws IOException
    */
-  public void writeProto(DataOutput out) throws IOException {
+  public void writeProto(DataOutput out) throws IOException {                       // 将 token 及 secretKey 写入 protobuf
     CredentialsProto.Builder storage = CredentialsProto.newBuilder();
     for (Map.Entry<Text, Token<? extends TokenIdentifier>> e :
                                                          tokenMap.entrySet()) {
@@ -337,7 +337,7 @@ public class Credentials implements Writable {
    * Populates keys/values from proto buffer storage.
    * @param in - stream ready to read a serialized proto buffer message
    */
-  public void readProto(DataInput in) throws IOException {
+  public void readProto(DataInput in) throws IOException {                          // 从 protobuf 中读取 Credentials
     CredentialsProto storage = CredentialsProto.parseDelimitedFrom((DataInputStream)in);
     for (CredentialsKVProto kv : storage.getTokensList()) {
       addToken(new Text(kv.getAliasBytes().toByteArray()),
@@ -355,7 +355,7 @@ public class Credentials implements Writable {
    * @throws IOException
    */
   @Override
-  public void readFields(DataInput in) throws IOException {
+  public void readFields(DataInput in) throws IOException {                         // 从流中读取 tokenMap 和 secretKeysMap
     secretKeysMap.clear();
     tokenMap.clear();
 
@@ -397,7 +397,7 @@ public class Credentials implements Writable {
     addAll(other, false);
   }
 
-  private void addAll(Credentials other, boolean overwrite) {
+  private void addAll(Credentials other, boolean overwrite) {                       // 添加 Credentials 到当前实例中，可选择是否覆盖
     for(Map.Entry<Text, byte[]> secret: other.secretKeysMap.entrySet()) {
       Text key = secret.getKey();
       if (!secretKeysMap.containsKey(key) || overwrite) {

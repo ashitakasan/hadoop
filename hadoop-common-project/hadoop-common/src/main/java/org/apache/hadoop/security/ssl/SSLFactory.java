@@ -53,7 +53,7 @@ import java.util.List;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class SSLFactory implements ConnectionConfigurator {
+public class SSLFactory implements ConnectionConfigurator {                         // 使用Hadoop配置信息创建SSL引擎和SSL套接字的工厂类
   static final Logger LOG = LoggerFactory.getLogger(SSLFactory.class);
 
   @InterfaceAudience.Private
@@ -148,7 +148,7 @@ public class SSLFactory implements ConnectionConfigurator {
   }
 
   public static Configuration readSSLConfiguration(Configuration conf,
-                                                   Mode mode) {
+                                                   Mode mode) {                     // SSL 的所有配置都保存 sslConf 中，不使用默认的 config
     Configuration sslConf = new Configuration(false);
     sslConf.setBoolean(SSL_REQUIRE_CLIENT_CERT_KEY, conf.getBoolean(
         SSL_REQUIRE_CLIENT_CERT_KEY, SSL_REQUIRE_CLIENT_CERT_DEFAULT));
@@ -172,7 +172,7 @@ public class SSLFactory implements ConnectionConfigurator {
    * @throws IOException thrown if an IO error happened while reading the SSL
    * configuration.
    */
-  public void init() throws GeneralSecurityException, IOException {
+  public void init() throws GeneralSecurityException, IOException {                 // 初始化 SSLFactory、SSLContext
     keystoresFactory.init(mode);
     context = SSLContext.getInstance("TLS");
     context.init(keystoresFactory.getKeyManagers(),
@@ -245,7 +245,7 @@ public class SSLFactory implements ConnectionConfigurator {
     return sslEngine;
   }
 
-  private void disableExcludedCiphers(SSLEngine sslEngine) {
+  private void disableExcludedCiphers(SSLEngine sslEngine) {                        // 禁用 excludeCiphers 中包含的 Excluded 密码
     String[] cipherSuites = sslEngine.getEnabledCipherSuites();
 
     ArrayList<String> defaultEnabledCipherSuites =
@@ -275,7 +275,7 @@ public class SSLFactory implements ConnectionConfigurator {
    * the server keystore.
    */
   public SSLServerSocketFactory createSSLServerSocketFactory()
-    throws GeneralSecurityException, IOException {
+    throws GeneralSecurityException, IOException {                                  // 创建服务端的 SSLServerSocketFactory
     if (mode != Mode.SERVER) {
       throw new IllegalStateException(
           "Factory is not in SERVER mode. Actual mode is " + mode.toString());
@@ -293,7 +293,7 @@ public class SSLFactory implements ConnectionConfigurator {
    * the server keystore.
    */
   public SSLSocketFactory createSSLSocketFactory()
-    throws GeneralSecurityException, IOException {
+    throws GeneralSecurityException, IOException {                                  // 创建客户端的 SSLSocketFactory
     if (mode != Mode.CLIENT) {
       throw new IllegalStateException(
           "Factory is not in CLIENT mode. Actual mode is " + mode.toString());

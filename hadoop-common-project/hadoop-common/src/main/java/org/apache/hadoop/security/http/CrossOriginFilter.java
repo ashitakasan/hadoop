@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CrossOriginFilter implements Filter {
+public class CrossOriginFilter implements Filter {                                  // 跨域请求过滤器，主要在 web app 中使用
 
   private static final Logger LOG =
       LoggerFactory.getLogger(CrossOriginFilter.class);

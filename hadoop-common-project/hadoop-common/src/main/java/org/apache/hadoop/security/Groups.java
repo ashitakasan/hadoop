@@ -72,21 +72,21 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class Groups {
+public class Groups {                                                               // 提供 user <--> group 的映射服务，允许服务获取指定用户的所属的组
   private static final Logger LOG = LoggerFactory.getLogger(Groups.class);
   
-  private final GroupMappingServiceProvider impl;
+  private final GroupMappingServiceProvider impl;                                   // 用户和组信息提供者
 
   private final LoadingCache<String, List<String>> cache;
   private final AtomicReference<Map<String, List<String>>> staticMapRef =
       new AtomicReference<>();
-  private final long cacheTimeout;
+  private final long cacheTimeout;                                                  // cache 超时时间，默认 5 分钟
   private final long negativeCacheTimeout;
   private final long warningDeltaMs;
-  private final Timer timer;
+  private final Timer timer;                                                        // timer 在这里用于计算 metrics，以及缓存的过期和更新
   private Set<String> negativeCache;
   private final boolean reloadGroupsInBackground;
-  private final int reloadGroupsThreadCount;
+  private final int reloadGroupsThreadCount;                                        // 重新加载 group 信息的线程数
 
   private final AtomicLong backgroundRefreshSuccess =
       new AtomicLong(0);
@@ -161,7 +161,7 @@ public class Groups {
    * Parse the hadoop.user.group.static.mapping.overrides configuration to
    * staticUserToGroupsMap
    */
-  private void parseStaticMapping(Configuration conf) {
+  private void parseStaticMapping(Configuration conf) {                             // 解析 hadoop.user.group.static.mapping.overrides 参数配置
     String staticMapping = conf.get(
         CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES,
         CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES_DEFAULT);
@@ -206,7 +206,7 @@ public class Groups {
    * @return the group memberships of the user
    * @throws IOException if user does not exist
    */
-  public List<String> getGroups(final String user) throws IOException {
+  public List<String> getGroups(final String user) throws IOException {             // 获取指定用户的所有的组
     // No need to lookup for groups of static users
     Map<String, List<String>> staticUserToGroupsMap = staticMapRef.get();
     if (staticUserToGroupsMap != null) {
@@ -249,7 +249,7 @@ public class Groups {
   /**
    * Convert millisecond times from hadoop's timer to guava's nanosecond ticker.
    */
-  private static class TimerToTickerAdapter extends Ticker {
+  private static class TimerToTickerAdapter extends Ticker {                        // 将 hadoop timer 的毫秒转化为 guava 的纳秒
     private Timer timer;
 
     public TimerToTickerAdapter(Timer timer) {
@@ -266,7 +266,7 @@ public class Groups {
   /**
    * Deals with loading data into the cache.
    */
-  private class GroupCacheLoader extends CacheLoader<String, List<String>> {
+  private class GroupCacheLoader extends CacheLoader<String, List<String>> {        // 用于处理将数据加载到缓存中
 
     private ListeningExecutorService executorService;
 
@@ -379,7 +379,7 @@ public class Groups {
     /**
      * Queries impl for groups belonging to the user. This could involve I/O and take awhile.
      */
-    private List<String> fetchGroupList(String user) throws IOException {
+    private List<String> fetchGroupList(String user) throws IOException {           // 从 GroupMappingServiceProvider 获取用户组信息
       long startMs = timer.monotonicNow();
       List<String> groupList = impl.getGroups(user);
       long endMs = timer.monotonicNow();
