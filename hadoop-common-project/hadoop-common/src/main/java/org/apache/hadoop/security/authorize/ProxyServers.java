@@ -35,7 +35,7 @@ public class ProxyServers {
   public static void refresh(Configuration conf){
     Collection<String> tempServers = new HashSet<String>();
     // trusted proxy servers such as http proxies
-    for (String host : conf.getTrimmedStrings(CONF_HADOOP_PROXYSERVERS)) {
+    for (String host : conf.getTrimmedStrings(CONF_HADOOP_PROXYSERVERS)) {          // 配置需要被代理的服务 address，仅当前 jvm 环境有效
       InetSocketAddress addr = new InetSocketAddress(host, 0);
       if (!addr.isUnresolved()) {
         tempServers.add(addr.getAddress().getHostAddress());

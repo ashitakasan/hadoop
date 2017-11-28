@@ -31,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class Service {
+public class Service {                                                              // 与 Hadoop 服务授权相关的抽象定义
   private String key;
   private Class<?> protocol;
   

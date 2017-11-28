@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class ServiceAuthorizationManager {
+public class ServiceAuthorizationManager {                                          // 为服务请求处理服务级别权限的授权管理器，为服务指定 ACL 和机器列表
   static final String BLOCKED = ".blocked";
   static final String HOSTS = ".hosts";
 
@@ -51,11 +51,11 @@ public class ServiceAuthorizationManager {
 
   // For each class, first ACL in the array specifies the allowed entries
   // and second ACL specifies blocked entries.
-  private volatile Map<Class<?>, AccessControlList[]> protocolToAcls =
+  private volatile Map<Class<?>, AccessControlList[]> protocolToAcls =              // 对于每个类，第一个 ACL 表示允许的条目，第二个 ACL 表示拒绝的条目
     new IdentityHashMap<Class<?>, AccessControlList[]>();
   // For each class, first MachineList in the array specifies the allowed entries
   // and second MachineList specifies blocked entries.
-  private volatile Map<Class<?>, MachineList[]> protocolToMachineLists =
+  private volatile Map<Class<?>, MachineList[]> protocolToMachineLists =            // 对于每个类，第一个 ACL 表示允许的机器列表，第二个表示拒绝的机器列表
     new IdentityHashMap<Class<?>, MachineList[]>();
   
   /**
@@ -90,7 +90,7 @@ public class ServiceAuthorizationManager {
                                Class<?> protocol,
                                Configuration conf,
                                InetAddress addr
-                               ) throws AuthorizationException {
+                               ) throws AuthorizationException {                    // 验证用户是否可访问 protocol 表示的服务，服务可以向指定用户开放
     AccessControlList[] acls = protocolToAcls.get(protocol);
     MachineList[] hosts = protocolToMachineLists.get(protocol);
     if (acls == null || hosts == null) {
@@ -152,7 +152,7 @@ public class ServiceAuthorizationManager {
 
   @Private
   public void refreshWithLoadedConfiguration(Configuration conf,
-      PolicyProvider provider) {
+      PolicyProvider provider) {                                                    // 使用 conf 和 provider 来初始化 protocolToAcls 和 MachineLists
     final Map<Class<?>, AccessControlList[]> newAcls =
       new IdentityHashMap<Class<?>, AccessControlList[]>();
     final Map<Class<?>, MachineList[]> newMachineLists =
@@ -173,7 +173,7 @@ public class ServiceAuthorizationManager {
      defaultServiceHostsKey+ BLOCKED, "");
 
     // Parse the config file
-    Service[] services = provider.getServices();
+    Service[] services = provider.getServices();                                    // 解析配置文件，provider 一般是 hadoop-policy.xml
     if (services != null) {
       for (Service service : services) {
         AccessControlList acl =
@@ -209,7 +209,7 @@ public class ServiceAuthorizationManager {
   }
 
   @VisibleForTesting
-  public Set<Class<?>> getProtocolsWithAcls() {
+  public Set<Class<?>> getProtocolsWithAcls() {                                     // 以下方法用于获取协议的 ACL 和 MachineList
     return protocolToAcls.keySet();
   }
 

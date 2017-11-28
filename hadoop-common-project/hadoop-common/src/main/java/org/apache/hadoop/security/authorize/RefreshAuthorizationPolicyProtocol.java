@@ -32,7 +32,7 @@ import org.apache.hadoop.security.KerberosInfo;
     serverPrincipal=CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public interface RefreshAuthorizationPolicyProtocol {
+public interface RefreshAuthorizationPolicyProtocol {                               // 用于刷新当前使用的授权策略的协议
   
   /**
    * Version 1: Initial version

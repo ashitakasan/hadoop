@@ -65,7 +65,7 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
   private String configPrefix;
 
   @Override
-  public void init(String configurationPrefix) {
+  public void init(String configurationPrefix) {                                    // 使用 configPrefix 初始化 proxyUserAcl 和 proxyHosts
     configPrefix = configurationPrefix +
         (configurationPrefix.endsWith(".") ? "" : ".");
     
@@ -106,7 +106,7 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
 
   @Override
   public void authorize(UserGroupInformation user, 
-      String remoteAddress) throws AuthorizationException {
+      String remoteAddress) throws AuthorizationException {                         // 验证用户是否是可以行 doAs 的超级用户，即是否在 ACL 列表中
     
     if (user == null) {
       throw new IllegalArgumentException("user is null.");

@@ -42,7 +42,7 @@ public class ProxyUsers {
    * @param conf
    * @return ImpersonationProvider
    */
-  private static ImpersonationProvider getInstance(Configuration conf) {
+  private static ImpersonationProvider getInstance(Configuration conf) {            // 获取 ImpersonationProvider 的默认实例
     Class<? extends ImpersonationProvider> clazz =
         conf.getClass(
             CommonConfigurationKeysPublic.HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS,
@@ -66,7 +66,7 @@ public class ProxyUsers {
    * @param proxyUserPrefix proxy user configuration prefix
    */
   public static void refreshSuperUserGroupsConfiguration(Configuration conf,
-      String proxyUserPrefix) {
+      String proxyUserPrefix) {                                                     // 使用指定的代理用户前缀来刷新配置
     Preconditions.checkArgument(proxyUserPrefix != null && 
         !proxyUserPrefix.isEmpty(), "prefix cannot be NULL or empty");
     // sip is volatile. Any assignment to it as well as the object's state

@@ -35,7 +35,7 @@ public interface ImpersonationProvider  extends Configurable {
    * @param configurationPrefix the configuration prefix for the proxy user
    * properties
    */
-  public void init(String configurationPrefix);
+  public void init(String configurationPrefix);                                     // 指定代理用户属性的配置前缀，并初始化 provider
 
   /**
    * Authorize the superuser which is doing doAs
@@ -45,5 +45,5 @@ public interface ImpersonationProvider  extends Configurable {
    * @throws AuthorizationException
    */
   public void authorize(UserGroupInformation user, String remoteAddress)
-      throws AuthorizationException;
+      throws AuthorizationException;                                                // 授权正在执行 doAs 的超级用户
 }

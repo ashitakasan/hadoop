@@ -41,7 +41,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class AccessControlList implements Writable {
+public class AccessControlList implements Writable {                                // 表示配置的 ACL 的类
 
   static {                                      // register a ctor
     WritableFactories.setFactory
@@ -53,11 +53,11 @@ public class AccessControlList implements Writable {
   }
 
   // Indicates an ACL string that represents access to all users
-  public static final String WILDCARD_ACL_VALUE = "*";
+  public static final String WILDCARD_ACL_VALUE = "*";                              // 所有用户可访问
   private static final int INITIAL_CAPACITY = 256;
 
   // Set of users who are granted access.
-  private Collection<String> users;
+  private Collection<String> users;                                                 // 有权限访问的 users 和 groups
   // Set of groups which are granted access
   private Collection<String> groups;
   // Whether all users are granted access.
@@ -80,7 +80,7 @@ public class AccessControlList implements Writable {
    * 
    * @param aclString String representation of the ACL
    */
-  public AccessControlList(String aclString) {
+  public AccessControlList(String aclString) {                                      // 从字符串构造 ACL：user1,user2 group1,group2
     buildACL(aclString.split(" ", 2));
   }
   
@@ -92,7 +92,7 @@ public class AccessControlList implements Writable {
    * @param users comma separated list of users
    * @param groups comma separated list of groups
    */
-  public AccessControlList(String users, String groups) {
+  public AccessControlList(String users, String groups) {                           // 从用户和组的字符串 构造一个新的 ACL
     buildACL(new String[] {users, groups});
   }
 
@@ -129,7 +129,7 @@ public class AccessControlList implements Writable {
    * @param aclString check this ACL string for wildcard
    * @return true if ACL string contains wildcard false otherwise
    */
-  private boolean isWildCardACLValue(String aclString) {
+  private boolean isWildCardACLValue(String aclString) {                            // 检查 ACL 是否包含通配符
     if (aclString.contains(WILDCARD_ACL_VALUE) && 
         aclString.trim().equals(WILDCARD_ACL_VALUE)) {
       return true;
@@ -147,7 +147,7 @@ public class AccessControlList implements Writable {
    * @param user
    *          The user name
    */
-  public void addUser(String user) {
+  public void addUser(String user) {                                                // 在 ACL 列表中添加用户，这里不能添加通配符
     if (isWildCardACLValue(user)) {
       throw new IllegalArgumentException("User " + user + " can not be added");
     }
@@ -180,7 +180,7 @@ public class AccessControlList implements Writable {
    * @param user
    *          The user name
    */
-  public void removeUser(String user) {
+  public void removeUser(String user) {                                             // 从 ACL 列表中移除用户，这里不能移除通配符
     if (isWildCardACLValue(user)) {
       throw new IllegalArgumentException("User " + user + " can not be removed");
     }
@@ -227,7 +227,7 @@ public class AccessControlList implements Writable {
    * @param ugi UserGroupInformation to check if contained in the ACL
    * @return true if ugi is member of the list
    */
-  public final boolean isUserInList(UserGroupInformation ugi) {
+  public final boolean isUserInList(UserGroupInformation ugi) {                     // 检查用户是否在 ACL 列表中
     if (allAllowed || users.contains(ugi.getShortUserName())) {
       return true;
     } else if (!groups.isEmpty()) {
