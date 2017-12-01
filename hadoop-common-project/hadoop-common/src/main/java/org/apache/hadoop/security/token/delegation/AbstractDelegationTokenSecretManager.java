@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
 public abstract 
 class AbstractDelegationTokenSecretManager<TokenIdent 
 extends AbstractDelegationTokenIdentifier> 
-   extends SecretManager<TokenIdent> {
+   extends SecretManager<TokenIdent> {                                              // 服务端 SecretManager 的主要实现，用于管理 token
   private static final Logger LOG = LoggerFactory
       .getLogger(AbstractDelegationTokenSecretManager.class);
 
@@ -62,19 +62,19 @@ extends AbstractDelegationTokenIdentifier>
    * to DelegationTokenInformation. Protected by this object lock.
    */
   protected final Map<TokenIdent, DelegationTokenInformation> currentTokens 
-      = new HashMap<TokenIdent, DelegationTokenInformation>();
+      = new HashMap<TokenIdent, DelegationTokenInformation>();                                                          // 缓存有效的 token: TokenIdentifier <-> TokenInformation
   
   /**
    * Sequence number to create DelegationTokenIdentifier.
    * Protected by this object lock.
    */
-  protected int delegationTokenSequenceNumber = 0;
+  protected int delegationTokenSequenceNumber = 0;                                  // SecretManager 内部唯一序列号
   
   /**
    * Access to allKeys is protected by this object lock
    */
   protected final Map<Integer, DelegationKey> allKeys 
-      = new HashMap<Integer, DelegationKey>();
+      = new HashMap<Integer, DelegationKey>();                                                          // 服务端 keys，唯一序列号 <-> DelegationKey
   
   /**
    * Access to currentId is protected by this object lock.
@@ -105,13 +105,13 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * Create a secret manager
-   * @param delegationKeyUpdateInterval the number of milliseconds for rolling
+   * @param delegationKeyUpdateInterval the number of milliseconds for rolling      // 分配新密钥的时间
    *        new secret keys.
-   * @param delegationTokenMaxLifetime the maximum lifetime of the delegation
+   * @param delegationTokenMaxLifetime the maximum lifetime of the delegation       // token 最大生存时间
    *        tokens in milliseconds
-   * @param delegationTokenRenewInterval how often the tokens must be renewed
+   * @param delegationTokenRenewInterval how often the tokens must be renewed       // token 更新频率
    *        in milliseconds
-   * @param delegationTokenRemoverScanInterval how often the tokens are scanned
+   * @param delegationTokenRemoverScanInterval how often the tokens are scanned     // 监控 token 过期的频率
    *        for expired tokens in milliseconds
    */
   public AbstractDelegationTokenSecretManager(long delegationKeyUpdateInterval,
@@ -149,7 +149,7 @@ extends AbstractDelegationTokenIdentifier>
    * Add a previously used master key to cache (when NN restarts), 
    * should be called before activate(). 
    * */
-  public synchronized void addKey(DelegationKey key) throws IOException {
+  public synchronized void addKey(DelegationKey key) throws IOException {           // 添加先前使用的主密钥缓存(当 NN 重新启动时)
     if (running) // a safety check
       throw new IOException("Can't add delegation key to a running SecretManager.");
     if (key.getKeyId() > getCurrentKeyId()) {
@@ -307,7 +307,7 @@ extends AbstractDelegationTokenIdentifier>
    * @throws IOException
    */
   public synchronized void addPersistedDelegationToken(
-      TokenIdent identifier, long renewDate) throws IOException {
+      TokenIdent identifier, long renewDate) throws IOException {                   // 用于 recover 持久的委托令牌，必须在 startThreads 之前调用
     if (running) {
       // a safety check
       throw new IOException(
@@ -324,7 +324,7 @@ extends AbstractDelegationTokenIdentifier>
     if (identifier.getSequenceNumber() > getDelegationTokenSeqNum()) {
       setDelegationTokenSeqNum(identifier.getSequenceNumber());
     }
-    if (getTokenInfo(identifier) == null) {
+    if (getTokenInfo(identifier) == null) {                                         // 需要创建一个新的 DelegationToken
       currentTokens.put(identifier, new DelegationTokenInformation(renewDate,
           password, getTrackingIdIfEnabled(identifier)));
     } else {
@@ -338,7 +338,7 @@ extends AbstractDelegationTokenIdentifier>
    * This is called once by startThreads before tokenRemoverThread is created, 
    * and only by tokenRemoverThread afterwards.
    */
-  private void updateCurrentKey() throws IOException {
+  private void updateCurrentKey() throws IOException {                              // 更新当前 key，每次清理线程运行时都会调用
     LOG.info("Updating the current master key for generating delegation tokens");
     /* Create a new currentKey with an estimated expiry date. */
     int newCurrentId;
@@ -347,7 +347,7 @@ extends AbstractDelegationTokenIdentifier>
     }
     DelegationKey newKey = new DelegationKey(newCurrentId, System
         .currentTimeMillis()
-        + keyUpdateInterval + tokenMaxLifetime, generateSecret());
+        + keyUpdateInterval + tokenMaxLifetime, generateSecret());                  // 新生成一个 SecretKey，构造 DelegationKey
     //Log must be invoked outside the lock on 'this'
     logUpdateMasterKey(newKey);
     synchronized (this) {
@@ -360,7 +360,7 @@ extends AbstractDelegationTokenIdentifier>
    * Update the current master key for generating delegation tokens 
    * It should be called only by tokenRemoverThread.
    */
-  void rollMasterKey() throws IOException {
+  void rollMasterKey() throws IOException {                                         // 更新当前的主密钥，用于生成委托令牌
     synchronized (this) {
       removeExpiredKeys();
       /* set final expiry date for retiring currentKey */
@@ -391,7 +391,7 @@ extends AbstractDelegationTokenIdentifier>
   }
   
   @Override
-  protected synchronized byte[] createPassword(TokenIdent identifier) {
+  protected synchronized byte[] createPassword(TokenIdent identifier) {             // 根据 identifier 创建一个密码，保存在服务端，用于创建 token
     int sequenceNum;
     long now = Time.now();
     sequenceNum = incrementDelegationTokenSeqNum();
@@ -401,7 +401,7 @@ extends AbstractDelegationTokenIdentifier>
     identifier.setSequenceNumber(sequenceNum);
     LOG.info("Creating password for identifier: " + formatTokenId(identifier)
         + ", currentKey: " + currentKey.getKeyId());
-    byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
+    byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());   // 通常服务只需要 createPassword 即可，DelegationKey 可以相同
     DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
     try {
@@ -421,7 +421,7 @@ extends AbstractDelegationTokenIdentifier>
    * acquiring the secret manager's monitor.
    */
   protected DelegationTokenInformation checkToken(TokenIdent identifier)
-      throws InvalidToken {
+      throws InvalidToken {                                                         // 为给定的令牌id查找授权令牌信息，并验证该 token 是否已过期
     assert Thread.holdsLock(this);
     DelegationTokenInformation info = getTokenInfo(identifier);
     if (info == null) {
@@ -467,7 +467,7 @@ extends AbstractDelegationTokenIdentifier>
   public synchronized void verifyToken(TokenIdent identifier, byte[] password)
       throws InvalidToken {
     byte[] storedPassword = retrievePassword(identifier);
-    if (!MessageDigest.isEqual(password, storedPassword)) {
+    if (!MessageDigest.isEqual(password, storedPassword)) {                         // 验证 identifier 和 password 是否匹配
       throw new InvalidToken("token " + formatTokenId(identifier)
           + " is invalid, password doesn't match");
     }
@@ -482,10 +482,10 @@ extends AbstractDelegationTokenIdentifier>
    * @throws AccessControlException if the user can't renew token
    */
   public synchronized long renewToken(Token<TokenIdent> token,
-                         String renewer) throws InvalidToken, IOException {
+                         String renewer) throws InvalidToken, IOException {         // renew 一个 token，传入原始的 token 和 用户名
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
-    TokenIdent id = createIdentifier();
+    TokenIdent id = createIdentifier();                                             // 首先从子类创建 TokenIdent，根据这个 TokenIdent 创建 token
     id.readFields(in);
     LOG.info("Token renewal for identifier: " + formatTokenId(id)
         + "; total currentTokens " +  currentTokens.size());
@@ -507,7 +507,7 @@ extends AbstractDelegationTokenIdentifier>
           + " tries to renew a token " + formatTokenId(id)
           + " with non-matching renewer " + id.getRenewer());
     }
-    DelegationKey key = getDelegationKey(id.getMasterKeyId());
+    DelegationKey key = getDelegationKey(id.getMasterKeyId());                      // renew 的 token 必须是目前已经存在的
     if (key == null) {
       throw new InvalidToken("Unable to find master key for keyId="
           + id.getMasterKeyId()
@@ -515,7 +515,7 @@ extends AbstractDelegationTokenIdentifier>
           + formatTokenId(id) + " with sequenceNumber="
           + id.getSequenceNumber());
     }
-    byte[] password = createPassword(token.getIdentifier(), key.getKey());
+    byte[] password = createPassword(token.getIdentifier(), key.getKey());          // 根据原始 token 的 identifier 字节和 key 的字节创建密码
     if (!MessageDigest.isEqual(password, token.getPassword())) {
       throw new AccessControlException(renewer
           + " is trying to renew a token "
@@ -541,7 +541,7 @@ extends AbstractDelegationTokenIdentifier>
    * @throws AccessControlException if the user isn't allowed to cancel
    */
   public synchronized TokenIdent cancelToken(Token<TokenIdent> token,
-      String canceller) throws IOException {
+      String canceller) throws IOException {                                        // 从服务端删除 token
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
@@ -552,7 +552,7 @@ extends AbstractDelegationTokenIdentifier>
     if (id.getUser() == null) {
       throw new InvalidToken("Token with no owner " + formatTokenId(id));
     }
-    String owner = id.getUser().getUserName();
+    String owner = id.getUser().getUserName();                                      // 清理 token 的用户和该 token 的所有者必须相同
     Text renewer = id.getRenewer();
     HadoopKerberosName cancelerKrbName = new HadoopKerberosName(canceller);
     String cancelerShortName = cancelerKrbName.getShortName();
@@ -575,13 +575,13 @@ extends AbstractDelegationTokenIdentifier>
    * @param key the byte[] to create the secret key from
    * @return the secret key
    */
-  public static SecretKey createSecretKey(byte[] key) {
+  public static SecretKey createSecretKey(byte[] key) {                             // 只是将 字节数组 转化为 SecretKey
     return SecretManager.createSecretKey(key);
   }
 
   /** Class to encapsulate a token's renew date and password. */
   @InterfaceStability.Evolving
-  public static class DelegationTokenInformation {
+  public static class DelegationTokenInformation {                                  // 封装一个 token 的 renew 的日期和密码
     long renewDate;
     byte[] password;
     String trackingId;
@@ -611,7 +611,7 @@ extends AbstractDelegationTokenIdentifier>
   }
   
   /** Remove expired delegation tokens from cache */
-  private void removeExpiredToken() throws IOException {
+  private void removeExpiredToken() throws IOException {                            // 从 cache 中删除过期的 token
     long now = Time.now();
     Set<TokenIdent> expiredTokens = new HashSet<TokenIdent>();
     synchronized (this) {
@@ -621,7 +621,7 @@ extends AbstractDelegationTokenIdentifier>
         Map.Entry<TokenIdent, DelegationTokenInformation> entry = i.next();
         long renewDate = entry.getValue().getRenewDate();
         if (renewDate < now) {
-          expiredTokens.add(entry.getKey());
+          expiredTokens.add(entry.getKey());                                        // 过期的 token 从 cache 中删除，然后放入一个集合
           i.remove();
         }
       }
@@ -660,7 +660,7 @@ extends AbstractDelegationTokenIdentifier>
     return running;
   }
   
-  private class ExpiredTokenRemover extends Thread {
+  private class ExpiredTokenRemover extends Thread {                                // token 清除线程
     private long lastMasterKeyUpdate;
     private long lastTokenCacheCleanup;
 
@@ -680,7 +680,7 @@ extends AbstractDelegationTokenIdentifier>
               LOG.error("Master key updating failed: ", e);
             }
           }
-          if (lastTokenCacheCleanup + tokenRemoverScanInterval < now) {
+          if (lastTokenCacheCleanup + tokenRemoverScanInterval < now) {             // 每 tokenRemoverScanInterval 清理一次 token
             removeExpiredToken();
             lastTokenCacheCleanup = now;
           }
@@ -705,7 +705,7 @@ extends AbstractDelegationTokenIdentifier>
    * @return the delegation token identifier
    * @throws IOException
    */
-  public TokenIdent decodeTokenIdentifier(Token<TokenIdent> token) throws IOException {
+  public TokenIdent decodeTokenIdentifier(Token<TokenIdent> token) throws IOException {   // 解析 token 标识符
     return token.decodeIdentifier();
   }
 

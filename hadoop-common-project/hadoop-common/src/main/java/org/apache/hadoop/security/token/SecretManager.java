@@ -39,7 +39,7 @@ import org.apache.hadoop.ipc.StandbyException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public abstract class SecretManager<T extends TokenIdentifier> {
+public abstract class SecretManager<T extends TokenIdentifier> {                    // 服务端的密码管理器，每个 token 类型对应一个管理器
   /**
    * The token was invalid and the message explains why.
    */
@@ -57,7 +57,7 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * @param identifier the identifier to use
    * @return the new password
    */
-  protected abstract byte[] createPassword(T identifier);
+  protected abstract byte[] createPassword(T identifier);                           // 服务器为 identifier 创建密码
   
   /**
    * Retrieve the password for the given token identifier. Should check the date
@@ -68,7 +68,7 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * @throws InvalidToken the token was invalid
    */
   public abstract byte[] retrievePassword(T identifier)
-      throws InvalidToken;
+      throws InvalidToken;                                                          // 接收 identifier 并验证 identifier 是否过期或失效，返回其中的密码
   
   /**
    * The same functionality with {@link #retrievePassword}, except that this 
@@ -87,7 +87,7 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    *         compatibility        
    */
   public byte[] retriableRetrievePassword(T identifier)
-      throws InvalidToken, StandbyException, RetriableException, IOException {
+      throws InvalidToken, StandbyException, RetriableException, IOException {      // 表明客户端可以因为服务器端的临时问题 failover 执行相同的操作
     return retrievePassword(identifier);
   }
   
@@ -95,7 +95,7 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * Create an empty token identifier.
    * @return the newly created empty token identifier
    */
-  public abstract T createIdentifier();
+  public abstract T createIdentifier();                                             // 创建新的空的 identifier（无密码）
 
   /**
    * No-op if the secret manager is available for reading tokens, throw a
@@ -168,7 +168,7 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * @return the bytes of the generated password
    */
   protected static byte[] createPassword(byte[] identifier, 
-                                         SecretKey key) {
+                                         SecretKey key) {                           // 使用 key 计算 identifier 的 HMAC，并将输出作为密码返回
     Mac mac = threadLocalMac.get();
     try {
       mac.init(key);

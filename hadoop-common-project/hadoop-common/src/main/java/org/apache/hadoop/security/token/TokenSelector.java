@@ -32,7 +32,7 @@ import org.apache.hadoop.io.Text;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface TokenSelector<T extends TokenIdentifier> {
+public interface TokenSelector<T extends TokenIdentifier> {                         // 用于从多个 token 中选择 service 可用的 token
   Token<T> selectToken(Text service,
       Collection<Token<? extends TokenIdentifier>> tokens);
 }

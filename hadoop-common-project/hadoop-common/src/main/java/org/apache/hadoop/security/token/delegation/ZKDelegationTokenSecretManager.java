@@ -135,7 +135,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private ExecutorService listenerThreadPool;
   private final long shutdownTimeout;
 
-  public ZKDelegationTokenSecretManager(Configuration conf) {
+  public ZKDelegationTokenSecretManager(Configuration conf) {                       // 这里构造 zkTokenSecretManager 并初始化 zk 连接
     super(conf.getLong(DelegationTokenManager.UPDATE_INTERVAL,
         DelegationTokenManager.UPDATE_INTERVAL_DEFAULT) * 1000,
         conf.getLong(DelegationTokenManager.MAX_LIFETIME,
@@ -295,7 +295,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  public void startThreads() throws IOException {
+  public void startThreads() throws IOException {                                   // TokenSecretManager 启动的时候会调用该方法，这里启动一系列服务
     if (!isExternalClient) {
       try {
         zkClient.start();
@@ -341,7 +341,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       keyCache = new PathChildrenCache(zkClient, ZK_DTSM_MASTER_KEY_ROOT, true);
       if (keyCache != null) {
         keyCache.start(StartMode.BUILD_INITIAL_CACHE);
-        keyCache.getListenable().addListener(new PathChildrenCacheListener() {
+        keyCache.getListenable().addListener(new PathChildrenCacheListener() {      // 添加 zk 的 watcher，以便实时更新 token
           @Override
           public void childEvent(CuratorFramework client,
               PathChildrenCacheEvent event)
@@ -615,7 +615,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   @Override
   protected DelegationKey getDelegationKey(int keyId) {
     // First check if its I already have this key
-    DelegationKey key = allKeys.get(keyId);
+    DelegationKey key = allKeys.get(keyId);                                         // 如果本地没有缓存，则从 zk 获取，可能从别的节点过来的 key
     // Then query ZK
     if (key == null) {
       try {
@@ -652,7 +652,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  protected DelegationTokenInformation getTokenInfo(TokenIdent ident) {
+  protected DelegationTokenInformation getTokenInfo(TokenIdent ident) {             // 如果当前服务中没有找到 token，则去 zk 中查找
     // First check if I have this..
     DelegationTokenInformation tokenInfo = currentTokens.get(ident);
     // Then query ZK
@@ -676,7 +676,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
    *
    * @param ident Identifier of the token
    */
-  private synchronized void syncLocalCacheWithZk(TokenIdent ident) {
+  private synchronized void syncLocalCacheWithZk(TokenIdent ident) {                // 将本地 token 缓存同步到 zk
     try {
       DelegationTokenInformation tokenInfo = getTokenInfoFromZK(ident);
       if (tokenInfo != null && !currentTokens.containsKey(ident)) {
@@ -749,7 +749,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
     key.write(fsOut);
     try {
-      if (zkClient.checkExists().forPath(nodeCreatePath) != null) {
+      if (zkClient.checkExists().forPath(nodeCreatePath) != null) {                 // 服务新增了 token 后，需要同步到 zk，可供其他服务使用
         zkClient.setData().forPath(nodeCreatePath, os.toByteArray())
             .setVersion(-1);
         if (!isUpdate) {
@@ -872,7 +872,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     TokenIdent id = createIdentifier();
     id.readFields(in);
 
-    syncLocalCacheWithZk(id);
+    syncLocalCacheWithZk(id);                                                       // 当 token 失效时，必须要同步到 zk
     return super.cancelToken(token, canceller);
   }
 

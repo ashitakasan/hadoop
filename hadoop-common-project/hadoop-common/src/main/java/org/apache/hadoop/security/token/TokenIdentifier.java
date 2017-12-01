@@ -35,7 +35,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public abstract class TokenIdentifier implements Writable {
+public abstract class TokenIdentifier implements Writable {                         // token 的标识符，可以包含有关令牌的公共信息，包括其种类、类型
 
   private String trackingId = null;
 
@@ -51,13 +51,13 @@ public abstract class TokenIdentifier implements Writable {
    * @return the username. null is returned if username in the identifier is
    *         empty or null.
    */
-  public abstract UserGroupInformation getUser();
+  public abstract UserGroupInformation getUser();                                   // 用 token 中编码的用户名获取 ugi
 
   /**
    * Get the bytes for the token identifier
    * @return the bytes of the identifier
    */
-  public byte[] getBytes() {
+  public byte[] getBytes() {                                                        // 获取 token 的字节数组，目前默认为 4096 字节
     DataOutputBuffer buf = new DataOutputBuffer(4096);
     try {
       this.write(buf);
@@ -75,7 +75,7 @@ public abstract class TokenIdentifier implements Writable {
    *
    * @return tracking identifier
    */
-  public String getTrackingId() {
+  public String getTrackingId() {                                                   // 返回可用于在多个客户端会话间关联 token 使用的 跟踪标识符
     if (trackingId == null) {
       trackingId = DigestUtils.md5Hex(getBytes());
     }

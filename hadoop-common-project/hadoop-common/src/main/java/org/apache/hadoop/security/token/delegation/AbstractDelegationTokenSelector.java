@@ -36,7 +36,7 @@ import org.apache.hadoop.security.token.TokenSelector;
 public 
 class AbstractDelegationTokenSelector<TokenIdent 
 extends AbstractDelegationTokenIdentifier> 
-    implements TokenSelector<TokenIdent> {
+    implements TokenSelector<TokenIdent> {                                          // 从 tokens 中查找 service 与类型都匹配的 token
   private Text kindName;
   
   protected AbstractDelegationTokenSelector(Text kindName) {

@@ -27,7 +27,7 @@ import org.apache.hadoop.security.Credentials;
  *  delegation token fetch implementaions across different packages and
  *  compilation units.  Resolution of fetcher impl will be done at runtime.
  */
-public interface DtFetcher {
+public interface DtFetcher {                                                        // 在不同的包和编译单元中抽象和分离委托令牌
   /** Return a key used to identify the object/service implementation. */
   Text getServiceName();
 
@@ -37,5 +37,5 @@ public interface DtFetcher {
   /** Add any number of delegation tokens to Credentials object and return
    *  a token instance that is appropriate for aliasing, or null if none. */
   Token<?> addDelegationTokens(Configuration conf, Credentials creds,
-                               String renewer, String url) throws Exception;
+                               String renewer, String url) throws Exception;        // 向 credentials 添加任意数量的委托 token，并返回适当的 token 实例
 }

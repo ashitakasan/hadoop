@@ -43,7 +43,7 @@ import java.util.UUID;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class Token<T extends TokenIdentifier> implements Writable {
+public class Token<T extends TokenIdentifier> implements Writable {                 // 客户端的 token，主要包含 token identifier 和 password
   public static final Logger LOG = LoggerFactory.getLogger(Token.class);
 
   private static Map<Text, Class<? extends TokenIdentifier>> tokenKindMap;
@@ -60,7 +60,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * @param id the token identifier
    * @param mgr the secret manager
    */
-  public Token(T id, SecretManager<T> mgr) {
+  public Token(T id, SecretManager<T> mgr) {                                        // 构造 token 标识符和 token 标识符类型的密码管理器
     password = mgr.createPassword(id);
     identifier = id.getBytes();
     kind = id.getKind();
@@ -95,7 +95,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * Clone a token.
    * @param other the token to clone
    */
-  public Token(Token<T> other) {
+  public Token(Token<T> other) {                                                    // 从其他 token 创建新的 token 时，会 clone 所有字段而不是引用
     this.identifier = other.identifier.clone();
     this.password = other.password.clone();
     this.kind = new Text(other.kind);
@@ -110,7 +110,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * Construct a Token from a TokenProto.
    * @param tokenPB the TokenProto object
    */
-  public Token(TokenProto tokenPB) {
+  public Token(TokenProto tokenPB) {                                                // TokenProto 的序列化与反序列化
     this.identifier = tokenPB.getIdentifier().toByteArray();
     this.password = tokenPB.getPassword().toByteArray();
     this.kind = new Text(tokenPB.getKindBytes().toByteArray());
@@ -146,8 +146,8 @@ public class Token<T extends TokenIdentifier> implements Writable {
     synchronized (Token.class) {
       if (tokenKindMap == null) {
         tokenKindMap = Maps.newHashMap();
-        for (TokenIdentifier id : ServiceLoader.load(TokenIdentifier.class)) {
-          tokenKindMap.put(id.getKind(), id.getClass());
+        for (TokenIdentifier id : ServiceLoader.load(TokenIdentifier.class)) {      // 加载 META-INF.services/...TokenIdentifier 文件配置的实现类
+          tokenKindMap.put(id.getKind(), id.getClass());                            // 默认情况下只有一个： kms-dt
         }
       }
       cls = tokenKindMap.get(kind);
@@ -166,7 +166,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public T decodeIdentifier() throws IOException {
+  public T decodeIdentifier() throws IOException {                                  // 从 token 中解析 tokenIdentifier
     Class<? extends TokenIdentifier> cls = getClassForIdentifier(getKind());
     if (cls == null) {
       return null;
@@ -201,7 +201,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * @param newKind
    */
   @InterfaceAudience.Private
-  public synchronized void setKind(Text newKind) {
+  public synchronized void setKind(Text newKind) {                                  // 设置 token 类型，仅用于 service 包装了其他 service 的 token
     kind = newKind;
     renewer = null;
   }
@@ -250,16 +250,16 @@ public class Token<T extends TokenIdentifier> implements Writable {
 
   /**
    * Indicates whether the token is a clone.  Used by HA failover proxy
-   * to indicate a token should not be visible to the user via
+   * to indicate a token should not be visible to the user via                      // 不能通过用户的 UGI.getCredentials() 获取该 token
    * UGI.getCredentials()
    */
-  static class PrivateToken<T extends TokenIdentifier> extends Token<T> {
+  static class PrivateToken<T extends TokenIdentifier> extends Token<T> {           // 表明 token 是否是拷贝，被 HA failover proxy 使用
     final private Text publicService;
 
     PrivateToken(Token<T> publicToken, Text newService) {
       super(publicToken.identifier, publicToken.password, publicToken.kind,
           newService);
-      assert !publicToken.isPrivate();
+      assert !publicToken.isPrivate();                                              // 不能从私钥再拷贝一次
       publicService = publicToken.service;
       if (LOG.isDebugEnabled()) {
         LOG.debug("Cloned private token " + this + " from " + publicToken);
@@ -452,9 +452,9 @@ public class Token<T extends TokenIdentifier> implements Writable {
   }
 
   private static ServiceLoader<TokenRenewer> renewers =
-      ServiceLoader.load(TokenRenewer.class);
+      ServiceLoader.load(TokenRenewer.class);                                       // 默认为 KMSTokenRenewer
 
-  private synchronized TokenRenewer getRenewer() throws IOException {
+  private synchronized TokenRenewer getRenewer() throws IOException {               // 如果加载不到 renewer，则返回 TRIVIAL_RENEWER
     if (renewer != null) {
       return renewer;
     }
@@ -475,7 +475,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * Is this token managed so that it can be renewed or cancelled?
    * @return true, if it can be renewed and cancelled.
    */
-  public boolean isManaged() throws IOException {
+  public boolean isManaged() throws IOException {                                   // 这个 toekn 是否可以被 renew 或 失效
     return getRenewer().isManaged(this);
   }
 
@@ -506,7 +506,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public static class TrivialRenewer extends TokenRenewer {
+  public static class TrivialRenewer extends TokenRenewer {                         // 对于没有管理的令牌类型的 renewer，token 不支持 renew 和失效
 
     // define the kind for this renewer
     protected Text getKind() {

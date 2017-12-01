@@ -30,14 +30,14 @@ import org.apache.hadoop.io.Text;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public abstract class TokenRenewer {
+public abstract class TokenRenewer {                                                // 处理 token 更新的接口
 
   /**
    * Does this renewer handle this kind of token?
    * @param kind the kind of the token
    * @return true if this renewer can renew it
    */
-  public abstract boolean handleKind(Text kind);
+  public abstract boolean handleKind(Text kind);                                    // 这个 renewer 是否接受该类型的 token
 
   /**
    * Is the given token managed? Only managed tokens may be renewed or
@@ -46,7 +46,7 @@ public abstract class TokenRenewer {
    * @return true if the token may be renewed or cancelled
    * @throws IOException
    */
-  public abstract boolean isManaged(Token<?> token) throws IOException;
+  public abstract boolean isManaged(Token<?> token) throws IOException;             // 是否管理给定的令牌，只有受管理的 token 才能 renewed 或 失效
   
   /**
    * Renew the given token.

@@ -82,7 +82,7 @@ extends TokenIdentifier {
       realUgi = UserGroupInformation.createRemoteUser(realUser.toString());
       ugi = UserGroupInformation.createProxyUser(owner.toString(), realUgi);
     }
-    realUgi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
+    realUgi.setAuthenticationMethod(AuthenticationMethod.TOKEN);                    // 这里要设置认证方法为 TOKEN，不需要 Kerberos 了
     return ugi;
   }
 

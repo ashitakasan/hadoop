@@ -30,7 +30,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DelegationTokenIdentifier
-    extends AbstractDelegationTokenIdentifier {
+    extends AbstractDelegationTokenIdentifier {                                     // 由 DelegationTokenManager 管理的 token 标识符
 
   private Text kind;
 

@@ -42,7 +42,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DelegationTokenManager {
+public class DelegationTokenManager {                                               // 该 DelegationTokenManager 只是一个包装类
   private static final Logger LOG =
       LoggerFactory.getLogger(DelegationTokenManager.class);
 
@@ -68,7 +68,7 @@ public class DelegationTokenManager {
 
     private Text tokenKind;
 
-    public DelegationTokenSecretManager(Configuration conf, Text tokenKind) {
+    public DelegationTokenSecretManager(Configuration conf, Text tokenKind) {       // 默认情况下，一天 renew 一次 token，每小时 remove 一次
       super(conf.getLong(UPDATE_INTERVAL, UPDATE_INTERVAL_DEFAULT) * 1000,
           conf.getLong(MAX_LIFETIME, MAX_LIFETIME_DEFAULT) * 1000,
           conf.getLong(RENEW_INTERVAL, RENEW_INTERVAL_DEFAULT) * 1000,
@@ -115,7 +115,7 @@ public class DelegationTokenManager {
   private AbstractDelegationTokenSecretManager secretManager = null;
   private boolean managedSecretManager;
 
-  public DelegationTokenManager(Configuration conf, Text tokenKind) {
+  public DelegationTokenManager(Configuration conf, Text tokenKind) {               // 默认不启用 zk，默认使用 DelegationTokenSecretManager
     if (conf.getBoolean(ENABLE_ZK_KEY, false)) {
       this.secretManager = new ZKSecretManager(conf, tokenKind);
     } else {
@@ -165,7 +165,7 @@ public class DelegationTokenManager {
 
   @SuppressWarnings("unchecked")
   public Token<? extends AbstractDelegationTokenIdentifier> createToken(
-      UserGroupInformation ugi, String renewer, String service) {
+      UserGroupInformation ugi, String renewer, String service) {                   // 这里使用 secretManager 的 tokenIdentifier 构造 token
     LOG.debug("Creating token with ugi:{}, renewer:{}, service:{}.",
         ugi, renewer, service !=null ? service : "");
     renewer = (renewer == null) ? ugi.getShortUserName() : renewer;

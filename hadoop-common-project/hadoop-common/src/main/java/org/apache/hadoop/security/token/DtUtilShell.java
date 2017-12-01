@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 /**
  *  DtUtilShell is a set of command line token file management operations.
  */
-public class DtUtilShell extends CommandShell {
+public class DtUtilShell extends CommandShell {                                     // 令牌文件管理的命令行操作
   private static final Logger LOG = LoggerFactory.getLogger(DtUtilShell.class);
 
   private static final String FORMAT_SUBSTRING = "[-format (" +

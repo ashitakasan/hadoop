@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 /**
  * DtFileOperations is a collection of delegation token file operations.
  */
-public final class DtFileOperations {
+public final class DtFileOperations {                                               // 一些对于 token 文件的操作，静态方法
   private static final Logger LOG =
       LoggerFactory.getLogger(DtFileOperations.class);
 

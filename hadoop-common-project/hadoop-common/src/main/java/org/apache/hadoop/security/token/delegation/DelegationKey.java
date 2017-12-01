@@ -36,7 +36,7 @@ import org.apache.hadoop.io.WritableUtils;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class DelegationKey implements Writable {
+public class DelegationKey implements Writable {                                    // 用于生成和验证委托 token
   private int keyId;
   private long expiryDate;
   @Nullable
@@ -76,7 +76,7 @@ public class DelegationKey implements Writable {
     if (keyBytes == null || keyBytes.length == 0) {
       return null;
     } else {
-      SecretKey key = AbstractDelegationTokenSecretManager.createSecretKey(keyBytes);
+      SecretKey key = AbstractDelegationTokenSecretManager.createSecretKey(keyBytes);   // 用 SecretKeySpec 封装 key bytes
       return key;
     }
   }
