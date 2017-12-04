@@ -82,20 +82,20 @@ import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
  */
 @Public
 @InterfaceStability.Evolving
-public class Client implements AutoCloseable {
+public class Client implements AutoCloseable {                                      // IPC 服务的客户端
   
   public static final Logger LOG = LoggerFactory.getLogger(Client.class);
 
   /** A counter for generating call IDs. */
-  private static final AtomicInteger callIdCounter = new AtomicInteger();
+  private static final AtomicInteger callIdCounter = new AtomicInteger();           // RPC 调用计数器，会储存在 callId ThreadLocal 中
 
-  private static final ThreadLocal<Integer> callId = new ThreadLocal<Integer>();
-  private static final ThreadLocal<Integer> retryCount = new ThreadLocal<Integer>();
+  private static final ThreadLocal<Integer> callId = new ThreadLocal<Integer>();    // 当前线程的 RPC 调用的 callId
+  private static final ThreadLocal<Integer> retryCount = new ThreadLocal<Integer>();// RPC 请求重复次数计数器，用来限制每个 rpc 请求重复次数
   private static final ThreadLocal<Object> EXTERNAL_CALL_HANDLER
       = new ThreadLocal<>();
   private static final ThreadLocal<AsyncGet<? extends Writable, IOException>>
       ASYNC_RPC_RESPONSE = new ThreadLocal<>();
-  private static final ThreadLocal<Boolean> asynchronousMode =
+  private static final ThreadLocal<Boolean> asynchronousMode =                      // 当前线程的 RPC 调用是异步的还是同步的，发 rpc 请求线程是调用线程
       new ThreadLocal<Boolean>() {
         @Override
         protected Boolean initialValue() {
@@ -123,21 +123,21 @@ public class Client implements AutoCloseable {
   }
 
   private ConcurrentMap<ConnectionId, Connection> connections =
-      new ConcurrentHashMap<>();
+      new ConcurrentHashMap<>();                                                    // 保存了一个连接池，ConnectionId <-> Connection，以复用连接
 
   private Class<? extends Writable> valueClass;   // class of call values
   private AtomicBoolean running = new AtomicBoolean(true); // if client runs
   final private Configuration conf;
 
   private SocketFactory socketFactory;           // how to create sockets
-  private int refCount = 1;
+  private int refCount = 1;                                                         // 当前 client 的引用计数，用于缓存 client
 
-  private final int connectionTimeout;
+  private final int connectionTimeout;                                              // socket 连接超时，默认 20s
 
-  private final boolean fallbackAllowed;
+  private final boolean fallbackAllowed;                                            // 如果认证失败，默认不允许降级到 SIMPLE
   private final byte[] clientId;
   private final int maxAsyncCalls;
-  private final AtomicInteger asyncCallCounter = new AtomicInteger(0);
+  private final AtomicInteger asyncCallCounter = new AtomicInteger(0);              // 记录异步调用的计数器
 
   /**
    * Executor on which IPC calls' parameters are sent.
@@ -145,9 +145,9 @@ public class Client implements AutoCloseable {
    * thread isolates them from thread interruptions in the
    * calling code.
    */
-  private final ExecutorService sendParamsExecutor;
+  private final ExecutorService sendParamsExecutor;                                 // 发送 rpc 请求数据的线程池，全 jvm 唯一
   private final static ClientExecutorServiceFactory clientExcecutorFactory =
-      new ClientExecutorServiceFactory();
+      new ClientExecutorServiceFactory();                                           // 构造 发送数据的线程池 的工厂类，全 jvm 唯一
 
   private static class ClientExecutorServiceFactory {
     private int executorRefCount = 0;
@@ -161,7 +161,7 @@ public class Client implements AutoCloseable {
      * 
      * @return An ExecutorService instance
      */
-    synchronized ExecutorService refAndGetInstance() {
+    synchronized ExecutorService refAndGetInstance() {                              // 获取发送数据的线程池，每个客户端都会记录引用计数
       if (executorRefCount == 0) {
         clientExecutor = Executors.newCachedThreadPool(
             new ThreadFactoryBuilder()
@@ -183,7 +183,7 @@ public class Client implements AutoCloseable {
      * @return An ExecutorService instance if it exists.
      *   Null is returned if not.
      */
-    synchronized ExecutorService unrefAndCleanup() {
+    synchronized ExecutorService unrefAndCleanup() {                                // 如果 clientExecutor 没有客户端使用了，则停止它
       executorRefCount--;
       assert(executorRefCount >= 0);
       
@@ -224,7 +224,7 @@ public class Client implements AutoCloseable {
    * @param conf Configuration
    * @return the ping interval
    */
-  public static final int getPingInterval(Configuration conf) {
+  public static final int getPingInterval(Configuration conf) {                     // ping 请求时间间隔
     return conf.getInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY,
         CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT);
   }
@@ -240,13 +240,13 @@ public class Client implements AutoCloseable {
    * @deprecated use {@link #getRpcTimeout(Configuration)} instead
    */
   @Deprecated
-  final public static int getTimeout(Configuration conf) {
+  final public static int getTimeout(Configuration conf) {                          // 获取配置的 rpc 超时时间
     int timeout = getRpcTimeout(conf);
     if (timeout > 0)  {
       return timeout;
     }
     if (!conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY,
-        CommonConfigurationKeys.IPC_CLIENT_PING_DEFAULT)) {
+        CommonConfigurationKeys.IPC_CLIENT_PING_DEFAULT)) {                         // doPing ? min(pingInterval, rpcTimeout) : rpcTimeout
       return getPingInterval(conf);
     }
     return -1;
@@ -258,7 +258,7 @@ public class Client implements AutoCloseable {
    * @param conf Configuration
    * @return the timeout period in milliseconds.
    */
-  public static final int getRpcTimeout(Configuration conf) {
+  public static final int getRpcTimeout(Configuration conf) {                       // 配置的 rpc 请求的超时时间，默认没有超时时间
     int timeout =
         conf.getInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY,
             CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_DEFAULT);
@@ -304,7 +304,7 @@ public class Client implements AutoCloseable {
   }
 
   /** Check the rpc response header. */
-  void checkResponse(RpcResponseHeaderProto header) throws IOException {
+  void checkResponse(RpcResponseHeaderProto header) throws IOException {            // 检查 rpc 请求头
     if (header == null) {
       throw new EOFException("Response is null.");
     }
@@ -312,7 +312,7 @@ public class Client implements AutoCloseable {
       // check client IDs
       final byte[] id = header.getClientId().toByteArray();
       if (!Arrays.equals(id, RpcConstants.DUMMY_CLIENT_ID)) {
-        if (!Arrays.equals(id, clientId)) {
+        if (!Arrays.equals(id, clientId)) {                                         // 如果响应中的 client 不是虚拟客户端，则必须是当前 clientId
           throw new IOException("Client IDs not matched: local ID="
               + StringUtils.byteToHexString(clientId) + ", ID in response="
               + StringUtils.byteToHexString(header.getClientId().toByteArray()));
@@ -321,15 +321,15 @@ public class Client implements AutoCloseable {
     }
   }
 
-  Call createCall(RPC.RpcKind rpcKind, Writable rpcRequest) {
+  Call createCall(RPC.RpcKind rpcKind, Writable rpcRequest) {                       // 在当前 rpc 调用线程内创建 RPC Call
     return new Call(rpcKind, rpcRequest);
   }
 
   /** 
    * Class that represents an RPC call
    */
-  static class Call {
-    final int id;               // call id
+  static class Call {                                                               // 表示一个 RPC 请求，包含以下字段：
+    final int id;               // call id                                          // callId、retryCount、rpc请求数据、rpc响应、异常、rpc类型、完成标志
     final int retry;           // retry count
     final Writable rpcRequest;  // the serialized rpc request
     Writable rpcResponse;       // null if rpc has error
@@ -338,7 +338,7 @@ public class Client implements AutoCloseable {
     boolean done;               // true when call is done
     private final Object externalHandler;
 
-    private Call(RPC.RpcKind rpcKind, Writable param) {
+    private Call(RPC.RpcKind rpcKind, Writable param) {                             // 构造 Call，param 即 rpcRequest
       this.rpcKind = rpcKind;
       this.rpcRequest = param;
 
@@ -346,7 +346,7 @@ public class Client implements AutoCloseable {
       if (id == null) {
         this.id = nextCallId();
       } else {
-        callId.set(null);
+        callId.set(null);                                                           // RPC 请求线程复用，如果该线程曾执行 rpc 调用，则清空其 callId
         this.id = id;
       }
       
@@ -367,7 +367,7 @@ public class Client implements AutoCloseable {
 
     /** Indicate when the call is complete and the
      * value or error are available.  Notifies by default.  */
-    protected synchronized void callComplete() {
+    protected synchronized void callComplete() {                                    // 表明 rpc 调用已完成或出错，这里通知调用者
       this.done = true;
       notify();                                 // notify caller
 
@@ -383,7 +383,7 @@ public class Client implements AutoCloseable {
      * 
      * @param error exception thrown by the call; either local or remote
      */
-    public synchronized void setException(IOException error) {
+    public synchronized void setException(IOException error) {                      // 调用出错时设置异常，并通知调用者
       this.error = error;
       callComplete();
     }
@@ -393,7 +393,7 @@ public class Client implements AutoCloseable {
      * 
      * @param rpcResponse return value of the rpc call.
      */
-    public synchronized void setRpcResponse(Writable rpcResponse) {
+    public synchronized void setRpcResponse(Writable rpcResponse) {                 // 设置 rpc 请求的响应，并通知调用者
       this.rpcResponse = rpcResponse;
       callComplete();
     }
@@ -406,39 +406,39 @@ public class Client implements AutoCloseable {
   /** Thread that reads responses and notifies callers.  Each connection owns a
    * socket connected to a remote address.  Calls are multiplexed through this
    * socket: responses may be delivered out of order. */
-  private class Connection extends Thread {
-    private InetSocketAddress server;             // server ip:port
-    private final ConnectionId remoteId;                // connection id
-    private AuthMethod authMethod; // authentication method
+  private class Connection extends Thread {                                         // 用于读取响应并通知调用者的线程，包含一个 socket，可认为是 rpc 连接
+    private InetSocketAddress server;             // server ip:port                 // 主要包含以下字段：
+    private final ConnectionId remoteId;                // connection id            //   服务端 ip:port、connectionId、authMethod、authProtocol、
+    private AuthMethod authMethod; // authentication method                         //   sasl客户端、ipcStreams、socket、当前活跃的 rpcCall 等
     private AuthProtocol authProtocol;
     private int serviceClass;
     private SaslRpcClient saslRpcClient;
     
     private Socket socket = null;                 // connected socket
     private IpcStreams ipcStreams;
-    private final int maxResponseLength;
-    private final int rpcTimeout;
-    private int maxIdleTime; //connections will be culled if it was idle for 
+    private final int maxResponseLength;                                            // rpc 响应最大长度
+    private final int rpcTimeout;                                                   // rpc 超时时间
+    private int maxIdleTime; //connections will be culled if it was idle for        // 线程最长空闲等待时间
     //maxIdleTime msecs
-    private final RetryPolicy connectionRetryPolicy;
-    private final int maxRetriesOnSasl;
-    private int maxRetriesOnSocketTimeouts;
-    private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+    private final RetryPolicy connectionRetryPolicy;                                // 非超时导致的连接失败的重试策略
+    private final int maxRetriesOnSasl;                                             // sasl 最大重试次数
+    private int maxRetriesOnSocketTimeouts;                                         // socket 超时最大重试次数
+    private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm        // 是否启动 TCP Nagle 算法
     private final boolean tcpLowLatency; // if T then use low-delay QoS
-    private final boolean doPing; //do we need to send ping message
-    private final int pingInterval; // how often sends ping to the server
-    private final int soTimeout; // used by ipc ping and rpc timeout
+    private final boolean doPing; //do we need to send ping message                 // 是否需要发送 ping 请求
+    private final int pingInterval; // how often sends ping to the server           // ping 时间间隔
+    private final int soTimeout; // used by ipc ping and rpc timeout                // rpc 超时时间
     private byte[] pingRequest; // ping message
 
     // currently active calls
-    private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
+    private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();        // 当前连接线程中所有活跃的 rpc call
     private AtomicLong lastActivity = new AtomicLong();// last I/O activity time
     private AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
     
-    private final Object sendRpcRequestLock = new Object();
+    private final Object sendRpcRequestLock = new Object();                         // rpc 请求锁，确保该连接线程内 其他线程发送 rpc 请求数据是同步(串行)的
 
-    public Connection(ConnectionId remoteId, int serviceClass) throws IOException {
+    public Connection(ConnectionId remoteId, int serviceClass) throws IOException { // 主要从 ConnectionId 中取数据，serviceClass 仅仅类似于版本号
       this.remoteId = remoteId;
       this.server = remoteId.getAddress();
       if (server.isUnresolved()) {
@@ -450,12 +450,12 @@ public class Client implements AutoCloseable {
       }
       this.maxResponseLength = remoteId.conf.getInt(
           CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH,
-          CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH_DEFAULT);
+          CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH_DEFAULT);             // 默认 rpc 响应最大长度为 128M
       this.rpcTimeout = remoteId.getRpcTimeout();
       this.maxIdleTime = remoteId.getMaxIdleTime();
-      this.connectionRetryPolicy = remoteId.connectionRetryPolicy;
-      this.maxRetriesOnSasl = remoteId.getMaxRetriesOnSasl();
-      this.maxRetriesOnSocketTimeouts = remoteId.getMaxRetriesOnSocketTimeouts();
+      this.connectionRetryPolicy = remoteId.connectionRetryPolicy;                  // 非连接超时导致的连接失败的重试策略
+      this.maxRetriesOnSasl = remoteId.getMaxRetriesOnSasl();                       // client 认证(连接)失败后最大重试次数
+      this.maxRetriesOnSocketTimeouts = remoteId.getMaxRetriesOnSocketTimeouts();   // rpc Timeout(socket Timeout) 后最大重试次数
       this.tcpNoDelay = remoteId.getTcpNoDelay();
       this.tcpLowLatency = remoteId.getTcpLowLatency();
       this.doPing = remoteId.getDoPing();
@@ -467,16 +467,16 @@ public class Client implements AutoCloseable {
                 OperationProto.RPC_FINAL_PACKET, PING_CALL_ID,
                 RpcConstants.INVALID_RETRY_COUNT, clientId);
         pingHeader.writeDelimitedTo(buf);
-        pingRequest = buf.toByteArray();
+        pingRequest = buf.toByteArray();                                            // 构造 ping 请求数据，
       }
       this.pingInterval = remoteId.getPingInterval();
       if (rpcTimeout > 0) {
         // effective rpc timeout is rounded up to multiple of pingInterval
         // if pingInterval < rpcTimeout.
         this.soTimeout = (doPing && pingInterval < rpcTimeout) ?
-            pingInterval : rpcTimeout;
+            pingInterval : rpcTimeout;                                              // doPing ? min(pingInterval, rpcTimeout) : rpcTimeout
       } else {
-        this.soTimeout = pingInterval;
+        this.soTimeout = pingInterval;                                              // 如果不 doPing，则 soTimeout = 0
       }
       this.serviceClass = serviceClass;
       if (LOG.isDebugEnabled()) {
@@ -488,16 +488,16 @@ public class Client implements AutoCloseable {
       // this causes a SIMPLE client with tokens to attempt SASL
       boolean trySasl = UserGroupInformation.isSecurityEnabled() ||
                         (ticket != null && !ticket.getTokens().isEmpty());
-      this.authProtocol = trySasl ? AuthProtocol.SASL : AuthProtocol.NONE;
+      this.authProtocol = trySasl ? AuthProtocol.SASL : AuthProtocol.NONE;          // 如果启用了安全性，或者 ugi 包含 token，则尝试使用 SASL
       
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
           server.toString() +
           " from " + ((ticket==null)?"an unknown user":ticket.getUserName()));
-      this.setDaemon(true);
+      this.setDaemon(true);                                                         // 防止因为连接线程退出缓慢导致 jvm 延迟结束
     }
 
     /** Update lastActivity with the current time. */
-    private void touch() {
+    private void touch() {                                                          // 更新最近一次 rpc 连接活跃时间
       lastActivity.set(Time.now());
     }
 
@@ -508,7 +508,7 @@ public class Client implements AutoCloseable {
      * @param call to add
      * @return true if the call was added.
      */
-    private synchronized boolean addCall(Call call) {
+    private synchronized boolean addCall(Call call) {                               // 在此连接的调用队列中添加一个 rpc call，并通知该线程的监听者
       if (shouldCloseConnection.get())
         return false;
       calls.put(call.id, call);
@@ -520,7 +520,7 @@ public class Client implements AutoCloseable {
      * reading. If no failure is detected, it retries until at least
      * a byte is read.
      */
-    private class PingInputStream extends FilterInputStream {
+    private class PingInputStream extends FilterInputStream {                       // 当读取超时时，这个类发送一个 ping 到远端，如果没有失败则一直重试
       /* constructor */
       protected PingInputStream(InputStream in) {
         super(in);
@@ -531,9 +531,9 @@ public class Client implements AutoCloseable {
        * the RPC is not timed out yet, send a ping.
        */
       private void handleTimeout(SocketTimeoutException e, int waiting)
-          throws IOException {
+          throws IOException {                                                      // 处理 ping 请求的 socket timeout
         if (shouldCloseConnection.get() || !running.get() ||
-            (0 < rpcTimeout && rpcTimeout <= waiting)) {
+            (0 < rpcTimeout && rpcTimeout <= waiting)) {                            // 连接关闭、client 停止、ping 时间大于 rpcTimeout 则抛出异常
           throw e;
         } else {
           sendPing();
@@ -546,7 +546,7 @@ public class Client implements AutoCloseable {
        * @throws IOException for any IO problem other than socket timeout
        */
       @Override
-      public int read() throws IOException {
+      public int read() throws IOException {                                        // 从流中读取一个字节，失败则重试并发送 ping 请求，直到 rpcTimeout
         int waiting = 0;
         do {
           try {
@@ -565,7 +565,7 @@ public class Client implements AutoCloseable {
        * @return the total number of bytes read; -1 if the connection is closed.
        */
       @Override
-      public int read(byte[] buf, int off, int len) throws IOException {
+      public int read(byte[] buf, int off, int len) throws IOException {            // 从流的 off 处读取 len 字节数据到 buf 中，失败则发送 ping
         int waiting = 0;
         do {
           try {
@@ -578,7 +578,7 @@ public class Client implements AutoCloseable {
       }
     }
     
-    private synchronized void disposeSasl() {
+    private synchronized void disposeSasl() {                                       // 释放 saslClient 占用的资源，关闭 saslClient
       if (saslRpcClient != null) {
         try {
           saslRpcClient.dispose();
@@ -588,7 +588,7 @@ public class Client implements AutoCloseable {
       }
     }
     
-    private synchronized boolean shouldAuthenticateOverKrb() throws IOException {
+    private synchronized boolean shouldAuthenticateOverKrb() throws IOException {   // 判断请求是否需要通过 kerberos 认证
       UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
       UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
       UserGroupInformation realUser = currentUser.getRealUser();
@@ -604,13 +604,13 @@ public class Client implements AutoCloseable {
     }
 
     private synchronized AuthMethod setupSaslConnection(IpcStreams streams)
-        throws IOException {
+        throws IOException {                                                        // 建立 saslRpcClient 到服务端的连接认证
       // Do not use Client.conf here! We must use ConnectionId.conf, since the
       // Client object is cached and shared between all RPC clients, even those
       // for separate services.
       saslRpcClient = new SaslRpcClient(remoteId.getTicket(),
           remoteId.getProtocol(), remoteId.getAddress(), remoteId.conf);
-      return saslRpcClient.saslConnect(streams);
+      return saslRpcClient.saslConnect(streams);                                    // 通过 streams 建立 saslRpcClient 到服务端的连接认证
     }
 
     /**
@@ -620,7 +620,7 @@ public class Client implements AutoCloseable {
      * @return true if an addr change was detected.
      * @throws IOException when the hostname cannot be resolved.
      */
-    private synchronized boolean updateAddress() throws IOException {
+    private synchronized boolean updateAddress() throws IOException {               // 如果对应主机名的地址发生更改，则更新服务器地址，并重置重试次数
       // Do a fresh lookup with the old host name.
       InetSocketAddress currentAddr = NetUtils.createSocketAddrForHost(
                                server.getHostName(), server.getPort());
@@ -635,12 +635,12 @@ public class Client implements AutoCloseable {
     }
     
     private synchronized void setupConnection(
-        UserGroupInformation ticket) throws IOException {
+        UserGroupInformation ticket) throws IOException {                           // 使用 ticket 建立连接
       short ioFailures = 0;
       short timeoutFailures = 0;
       while (true) {
         try {
-          this.socket = socketFactory.createSocket();
+          this.socket = socketFactory.createSocket();                               // 创建 socket 并配置 tcp 一些参数
           this.socket.setTcpNoDelay(tcpNoDelay);
           this.socket.setKeepAlive(true);
           
@@ -664,7 +664,7 @@ public class Client implements AutoCloseable {
            * to host name in principal passed.
            */
           InetSocketAddress bindAddr = null;
-          if (ticket != null && ticket.hasKerberosCredentials()) {
+          if (ticket != null && ticket.hasKerberosCredentials()) {                  // 将 socket 绑定到客户端 principal 中指定的主机，确保地址匹配
             KerberosInfo krbInfo = 
               remoteId.getProtocol().getAnnotation(KerberosInfo.class);
             if (krbInfo != null) {
@@ -682,7 +682,7 @@ public class Client implements AutoCloseable {
             }
           }
           
-          NetUtils.connect(this.socket, server, bindAddr, connectionTimeout);
+          NetUtils.connect(this.socket, server, bindAddr, connectionTimeout);       // 建立到 server 的 rpc 连接，设置 socket 超时时间
           this.socket.setSoTimeout(soTimeout);
           return;
         } catch (ConnectTimeoutException toe) {
@@ -693,12 +693,12 @@ public class Client implements AutoCloseable {
             timeoutFailures = ioFailures = 0;
           }
           handleConnectionTimeout(timeoutFailures++,
-              maxRetriesOnSocketTimeouts, toe);
+              maxRetriesOnSocketTimeouts, toe);                                     // 连接超时属于 socket 超时，这里处理 SocketTimeout
         } catch (IOException ie) {
           if (updateAddress()) {
             timeoutFailures = ioFailures = 0;
           }
-          handleConnectionFailure(ioFailures++, ie);
+          handleConnectionFailure(ioFailures++, ie);                                // 这里处理非连接超时导致的失败
         }
       }
     }
@@ -714,12 +714,12 @@ public class Client implements AutoCloseable {
     private synchronized void handleSaslConnectionFailure(
         final int currRetries, final int maxRetries, final Exception ex,
         final Random rand, final UserGroupInformation ugi) throws IOException,
-        InterruptedException {
+        InterruptedException {                                                      // 处理 sasl 连接认证失败
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws IOException, InterruptedException {
           final short MAX_BACKOFF = 5000;
-          closeConnection();
+          closeConnection();                                                        // 关闭 socket 连接，关闭 saslClient，释放 saslClient 占用的资源
           disposeSasl();
           if (shouldAuthenticateOverKrb()) {
             if (currRetries < maxRetries) {
@@ -729,7 +729,7 @@ public class Client implements AutoCloseable {
               }
               // try re-login
               if (UserGroupInformation.isLoginKeytabBased()) {
-                UserGroupInformation.getLoginUser().reloginFromKeytab();
+                UserGroupInformation.getLoginUser().reloginFromKeytab();            // 重新向服务器发起认证
               } else if (UserGroupInformation.isLoginTicketBased()) {
                 UserGroupInformation.getLoginUser().reloginFromTicketCache();
               }
@@ -737,9 +737,9 @@ public class Client implements AutoCloseable {
               //we are sleeping with the Connection lock held but since this
               //connection instance is being used for connecting to the server
               //in question, it is okay
-              Thread.sleep((rand.nextInt(MAX_BACKOFF) + 1));
+              Thread.sleep((rand.nextInt(MAX_BACKOFF) + 1));                        // 这里是建立到服务端的连接，因此可以在这里 sleep
               return null;
-            } else {
+            } else {                                                                // 如果超过最大重试次数，则抛出异常
               String msg = "Couldn't setup connection for "
                   + UserGroupInformation.getLoginUser().getUserName() + " to "
                   + remoteId;
@@ -763,13 +763,13 @@ public class Client implements AutoCloseable {
      * the connection thread that waits for responses.
      */
     private synchronized void setupIOstreams(
-        AtomicBoolean fallbackToSimpleAuth) {
+        AtomicBoolean fallbackToSimpleAuth) {                                       // 建立客户端到服务端的连接并建立 i/o 流，发送请求头并启动连接线程
       if (socket != null || shouldCloseConnection.get()) {
         return;
       }
       UserGroupInformation ticket = remoteId.getTicket();
       if (ticket != null) {
-        final UserGroupInformation realUser = ticket.getRealUser();
+        final UserGroupInformation realUser = ticket.getRealUser();                 // rpc 请求需要拿到真实的用户 realUser
         if (realUser != null) {
           ticket = realUser;
         }
@@ -785,13 +785,13 @@ public class Client implements AutoCloseable {
         short numRetries = 0;
         Random rand = null;
         while (true) {
-          setupConnection(ticket);
+          setupConnection(ticket);                                                  // 使用 ticket 建立客户端到 server 的连接
           ipcStreams = new IpcStreams(socket, maxResponseLength);
           writeConnectionHeader(ipcStreams);
           if (authProtocol == AuthProtocol.SASL) {
             try {
               authMethod = ticket
-                  .doAs(new PrivilegedExceptionAction<AuthMethod>() {
+                  .doAs(new PrivilegedExceptionAction<AuthMethod>() {               // 建立 saslRpcClient 到服务端的连接认证
                     @Override
                     public AuthMethod run()
                         throws IOException, InterruptedException {
@@ -804,17 +804,17 @@ public class Client implements AutoCloseable {
                 throw ex;
               }
               // otherwise, assume a connection problem
-              authMethod = saslRpcClient.getAuthMethod();
+              authMethod = saslRpcClient.getAuthMethod();                           // saslRpcClient 认证失败时可能会降级，这里需要重新获取 authMethod
               if (rand == null) {
                 rand = new Random();
               }
               handleSaslConnectionFailure(numRetries++, maxRetriesOnSasl, ex,
-                  rand, ticket);
+                  rand, ticket);                                                    // 这里处理 sasl 客户端连接认证失败
               continue;
             }
             if (authMethod != AuthMethod.SIMPLE) {
               // Sasl connect is successful. Let's set up Sasl i/o streams.
-              ipcStreams.setSaslClient(saslRpcClient);
+              ipcStreams.setSaslClient(saslRpcClient);                              // 表明连接认证成功，建立 IPC 的 I/O 流，此时 in/out 为空
               // for testing
               remoteId.saslQop =
                   (String)saslRpcClient.getNegotiatedProperty(Sasl.QOP);
@@ -822,23 +822,23 @@ public class Client implements AutoCloseable {
               if (fallbackToSimpleAuth != null) {
                 fallbackToSimpleAuth.set(false);
               }
-            } else if (UserGroupInformation.isSecurityEnabled()) {
+            } else if (UserGroupInformation.isSecurityEnabled()) {                  // 如果因为认证失败导致 认证降级，根据 rpc 是否允许来决定是否抛出异常
               if (!fallbackAllowed) {
                 throw new IOException("Server asks us to fall back to SIMPLE " +
                     "auth, but this client is configured to only allow secure " +
                     "connections.");
               }
-              if (fallbackToSimpleAuth != null) {
+              if (fallbackToSimpleAuth != null) {                                   // 通知调用者连接认证被降级了
                 fallbackToSimpleAuth.set(true);
               }
             }
           }
 
           if (doPing) {
-            ipcStreams.setInputStream(new PingInputStream(ipcStreams.in));
+            ipcStreams.setInputStream(new PingInputStream(ipcStreams.in));          // 设置输入流为 PingInputStream
           }
 
-          writeConnectionContext(remoteId, authMethod);
+          writeConnectionContext(remoteId, authMethod);                             // 写入 rpc ConnectionContext，包含当前连接的具体信息
 
           // update last activity time
           touch();
@@ -850,10 +850,10 @@ public class Client implements AutoCloseable {
 
           // start the receiver thread after the socket connection has been set
           // up
-          start();
+          start();                                                                  // 建立 socket 连接后，启动当前线程，开始接收 rpc 数据
           return;
         }
-      } catch (Throwable t) {
+      } catch (Throwable t) {                                                       // 连接过程中发送任何异常，都要结束当前连接线程，最后关闭当前连接
         if (t instanceof IOException) {
           markClosed((IOException)t);
         } else {
@@ -863,7 +863,7 @@ public class Client implements AutoCloseable {
       }
     }
     
-    private void closeConnection() {
+    private void closeConnection() {                                                // 关闭当前 connection 的 socket 连接，可重新连接
       if (socket == null) {
         return;
       }
@@ -893,12 +893,12 @@ public class Client implements AutoCloseable {
      * @throws IOException if max number of retries is reached
      */
     private void handleConnectionTimeout(
-        int curRetries, int maxRetries, IOException ioe) throws IOException {
+        int curRetries, int maxRetries, IOException ioe) throws IOException {       // 处理连接超时，先关闭 socket 连接，再重新连接
 
       closeConnection();
 
       // throw the exception if the maximum number of retries is reached
-      if (curRetries >= maxRetries) {
+      if (curRetries >= maxRetries) {                                               // 如果重试次数超过最大次数，则停止重试并抛出异常
         throw ioe;
       }
       LOG.info("Retrying connect to server: " + server + ". Already tried "
@@ -906,12 +906,12 @@ public class Client implements AutoCloseable {
     }
 
     private void handleConnectionFailure(int curRetries, IOException ioe
-        ) throws IOException {
+        ) throws IOException {                                                      // 处理非连接超时导致的连接失败，先关闭连接，再重试
       closeConnection();
 
       final RetryAction action;
       try {
-        action = connectionRetryPolicy.shouldRetry(ioe, curRetries, 0, true);
+        action = connectionRetryPolicy.shouldRetry(ioe, curRetries, 0, true);       // 根据 retryPolicy 决定是否继续重试连接，需要关闭 socket 连接
       } catch(Exception e) {
         throw e instanceof IOException? (IOException)e: new IOException(e);
       }
@@ -932,7 +932,7 @@ public class Client implements AutoCloseable {
       }
 
       try {
-        Thread.sleep(action.delayMillis);
+        Thread.sleep(action.delayMillis);                                           // 根据 retryPolicy，sleep 指定时间后再进行重试
       } catch (InterruptedException e) {
         throw (IOException)new InterruptedIOException("Interrupted: action="
             + action + ", retry policy=" + connectionRetryPolicy).initCause(e);
@@ -954,7 +954,7 @@ public class Client implements AutoCloseable {
      * +----------------------------------+
      */
     private void writeConnectionHeader(IpcStreams streams)
-        throws IOException {
+        throws IOException {                                                        // 写入 rpc 请求头，只在连接建立时才写入 rpc 流
       // Write out the header, version and authentication method.
       // The output stream is buffered but we must not flush it yet.  The
       // connection setup protocol requires the client to send multiple
@@ -969,7 +969,7 @@ public class Client implements AutoCloseable {
       final DataOutputStream out = streams.out;
       synchronized (out) {
         out.write(RpcConstants.HEADER.array());
-        out.write(RpcConstants.CURRENT_VERSION);
+        out.write(RpcConstants.CURRENT_VERSION);                                    // 这里只写入 int 的低 8 位
         out.write(serviceClass);
         out.write(authProtocol.callId);
       }
@@ -980,7 +980,7 @@ public class Client implements AutoCloseable {
      */
     private void writeConnectionContext(ConnectionId remoteId,
                                         AuthMethod authMethod)
-                                            throws IOException {
+                                            throws IOException {                    // 将 connection context header 写入 rpc 流，每个连接线程只写一次
       // Write out the ConnectionHeader
       IpcConnectionContextProto message = ProtoUtil.makeIpcConnectionContext(
           RPC.getProtocolName(remoteId.getProtocol()),
@@ -989,7 +989,7 @@ public class Client implements AutoCloseable {
       RpcRequestHeaderProto connectionContextHeader = ProtoUtil
           .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
               OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID,
-              RpcConstants.INVALID_RETRY_COUNT, clientId);
+              RpcConstants.INVALID_RETRY_COUNT, clientId);                          // 构造 RpcRequestHeaderProto，并写入 ipcStreams 输出流中
       // do not flush.  the context and first ipc call request must be sent
       // together to avoid possibility of broken pipes upon authz failure.
       // see writeConnectionHeader
@@ -1007,20 +1007,20 @@ public class Client implements AutoCloseable {
      * 
      * Return true if it is time to read a response; false otherwise.
      */
-    private synchronized boolean waitForWork() {
+    private synchronized boolean waitForWork() {                                    // 连接线程一直在这里 wait 等待，直到有工作可做或者空闲超时
       if (calls.isEmpty() && !shouldCloseConnection.get()  && running.get())  {
         long timeout = maxIdleTime-
               (Time.now()-lastActivity.get());
         if (timeout>0) {
           try {
-            wait(timeout);
+            wait(timeout);                                                          // 如果没有工作可做，则一直再这里 wait，直到其他线程唤醒它
           } catch (InterruptedException e) {}
         }
       }
       
       if (!calls.isEmpty() && !shouldCloseConnection.get() && running.get()) {
         return true;
-      } else if (shouldCloseConnection.get()) {
+      } else if (shouldCloseConnection.get()) {                                     // 非正常情况被唤醒，需要关闭连接线程
         return false;
       } else if (calls.isEmpty()) { // idle connection closed or stopped
         markClosed(null);
@@ -1039,7 +1039,7 @@ public class Client implements AutoCloseable {
     /* Send a ping to the server if the time elapsed 
      * since last I/O activity is equal to or greater than the ping interval
      */
-    private synchronized void sendPing() throws IOException {
+    private synchronized void sendPing() throws IOException {                       // 向服务端发送 ping 请求，更新 rpc 连接活跃时间
       long curTime = Time.now();
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
@@ -1058,7 +1058,7 @@ public class Client implements AutoCloseable {
 
       try {
         while (waitForWork()) {//wait here for work - read or close connection
-          receiveRpcResponse();
+          receiveRpcResponse();                                                     // 连接线程的主要工作，读取 rpc 响应，一旦出错则关闭连接
         }
       } catch (Throwable t) {
         // This truly is unexpected, since we catch IOException in receiveResponse
@@ -1081,7 +1081,7 @@ public class Client implements AutoCloseable {
      * @param call - the rpc request
      */
     public void sendRpcRequest(final Call call)
-        throws InterruptedException, IOException {
+        throws InterruptedException, IOException {                                  // 向服务器发送 rpc 请求发起 rpc 调用，这是其他线程做的，不是连接线程
       if (shouldCloseConnection.get()) {
         return;
       }
@@ -1104,10 +1104,10 @@ public class Client implements AutoCloseable {
 
       final ResponseBuffer buf = new ResponseBuffer();
       header.writeDelimitedTo(buf);
-      RpcWritable.wrap(call.rpcRequest).writeTo(buf);
+      RpcWritable.wrap(call.rpcRequest).writeTo(buf);                               // 构造 rpc 请求的 proto，包含请求头（call 信息）、请求数据等
 
       synchronized (sendRpcRequestLock) {
-        Future<?> senderFuture = sendParamsExecutor.submit(new Runnable() {
+        Future<?> senderFuture = sendParamsExecutor.submit(new Runnable() {         // 序列化 call 是调用者线程，发送数据是 sendParamsExecutor 线程池
           @Override
           public void run() {
             try {
@@ -1120,14 +1120,14 @@ public class Client implements AutoCloseable {
                       + " " + call.rpcRequest);
                 }
                 // RpcRequestHeader + RpcRequest
-                ipcStreams.sendRequest(buf.toByteArray());
+                ipcStreams.sendRequest(buf.toByteArray());                          // 真正的发送 rpc 请求数据的方法，直到发送完数据才释放 out 同步锁
                 ipcStreams.flush();
               }
             } catch (IOException e) {
               // exception at this point would leave the connection in an
               // unrecoverable state (eg half a call left on the wire).
               // So, close the connection, killing any outstanding calls
-              markClosed(e);
+              markClosed(e);                                                        // 异常可能导致连接无法恢复，因此这里关闭当前连接
             } finally {
               //the buffer is just an in-memory buffer, but it is still polite to
               // close early
@@ -1137,7 +1137,7 @@ public class Client implements AutoCloseable {
         });
       
         try {
-          senderFuture.get();
+          senderFuture.get();                                                       // 调用者线程在这里等待 rpc 请求发送完成，异常将抛出到调用者线程
         } catch (ExecutionException e) {
           Throwable cause = e.getCause();
           
@@ -1155,7 +1155,7 @@ public class Client implements AutoCloseable {
     /* Receive a response.
      * Because only one receiver, so no synchronization on in.
      */
-    private void receiveRpcResponse() {
+    private void receiveRpcResponse() {                                             // 从 ipcStreams 流中读取 rpc 响应
       if (shouldCloseConnection.get()) {
         return;
       }
@@ -1165,7 +1165,7 @@ public class Client implements AutoCloseable {
         ByteBuffer bb = ipcStreams.readResponse();
         RpcWritable.Buffer packet = RpcWritable.Buffer.wrap(bb);
         RpcResponseHeaderProto header =
-            packet.getValue(RpcResponseHeaderProto.getDefaultInstance());
+            packet.getValue(RpcResponseHeaderProto.getDefaultInstance());           // 通过流中读取的字节构造 proto
         checkResponse(header);
 
         int callId = header.getCallId();
@@ -1173,7 +1173,7 @@ public class Client implements AutoCloseable {
           LOG.debug(getName() + " got value #" + callId);
 
         RpcStatusProto status = header.getStatus();
-        if (status == RpcStatusProto.SUCCESS) {
+        if (status == RpcStatusProto.SUCCESS) {                                     // 请求成功，则取出响应数据，从 calls 中移除 call
           Writable value = packet.newInstance(valueClass, conf);
           final Call call = calls.remove(callId);
           call.setRpcResponse(value);
@@ -1182,7 +1182,7 @@ public class Client implements AutoCloseable {
         if (packet.remaining() > 0) {
           throw new RpcClientException("RPC response length mismatch");
         }
-        if (status != RpcStatusProto.SUCCESS) { // Rpc Request failed
+        if (status != RpcStatusProto.SUCCESS) { // Rpc Request failed               // 如果请求失败，则构造 RemoteException，关闭当前连接线程
           final String exceptionClassName = header.hasExceptionClassName() ?
                 header.getExceptionClassName() : 
                   "ServerDidNotSetExceptionClassName";
@@ -1194,7 +1194,7 @@ public class Client implements AutoCloseable {
              LOG.warn("Detailed error code not set by server on rpc error");
           }
           RemoteException re = new RemoteException(exceptionClassName, errorMsg, erCode);
-          if (status == RpcStatusProto.ERROR) {
+          if (status == RpcStatusProto.ERROR) {                                     // 如果 rpc ERROR，只是失败 call，如果是 FATAL，则关闭当前连接
             final Call call = calls.remove(callId);
             call.setException(re);
           } else if (status == RpcStatusProto.FATAL) {
@@ -1207,7 +1207,7 @@ public class Client implements AutoCloseable {
       }
     }
     
-    private synchronized void markClosed(IOException e) {
+    private synchronized void markClosed(IOException e) {                           // 设置连接关闭状态，通知其他线程逐步关闭该连接上的资源
       if (shouldCloseConnection.compareAndSet(false, true)) {
         closeException = e;
         notifyAll();
@@ -1215,7 +1215,7 @@ public class Client implements AutoCloseable {
     }
     
     /** Close the connection. */
-    private synchronized void close() {
+    private synchronized void close() {                                             // 关闭当前连接，移除连接池，并释放占用的资源
       if (!shouldCloseConnection.get()) {
         LOG.error("The connection is not in the closed state");
         return;
@@ -1224,10 +1224,10 @@ public class Client implements AutoCloseable {
       // We have marked this connection as closed. Other thread could have
       // already known it and replace this closedConnection with a new one.
       // We should only remove this closedConnection.
-      connections.remove(remoteId, this);
+      connections.remove(remoteId, this);                                           // 移除当前 ConnectionId，以便其他线程可以新建连接线程
 
       // close the streams and therefore the socket
-      IOUtils.closeStream(ipcStreams);
+      IOUtils.closeStream(ipcStreams);                                              // 关闭 ipcStreams 流，释放 saslClient 占用的资源
       disposeSasl();
 
       // clean up all calls
@@ -1248,7 +1248,7 @@ public class Client implements AutoCloseable {
         }
 
         // cleanup calls
-        cleanupCalls();
+        cleanupCalls();                                                             // 清理当前连接内的 rpc call，最后关闭 socket 连接
       }
       closeConnection();
       if (LOG.isDebugEnabled())
@@ -1256,7 +1256,7 @@ public class Client implements AutoCloseable {
     }
     
     /* Cleanup all calls and mark them as done */
-    private void cleanupCalls() {
+    private void cleanupCalls() {                                                   // 清理当前连接线程下的 calls，并设置每个 call 异常结束
       Iterator<Entry<Integer, Call>> itor = calls.entrySet().iterator() ;
       while (itor.hasNext()) {
         Call c = itor.next().getValue(); 
@@ -1269,7 +1269,7 @@ public class Client implements AutoCloseable {
   /** Construct an IPC client whose values are of the given {@link Writable}
    * class. */
   public Client(Class<? extends Writable> valueClass, Configuration conf, 
-      SocketFactory factory) {
+      SocketFactory factory) {                                                      // 构造一个 RPC 客户端，初始化一些配置参数
     this.valueClass = valueClass;
     this.conf = conf;
     this.socketFactory = factory;
@@ -1303,7 +1303,7 @@ public class Client implements AutoCloseable {
 
   /** Stop all threads related to this client.  No further calls may be made
    * using this client. */
-  public void stop() {
+  public void stop() {                                                              // 关闭当前客户端，这里是异步关闭的
     if (LOG.isDebugEnabled()) {
       LOG.debug("Stopping client");
     }
@@ -1318,7 +1318,7 @@ public class Client implements AutoCloseable {
     }
     
     // wait until all connections are closed
-    while (!connections.isEmpty()) {
+    while (!connections.isEmpty()) {                                                // 等待所有的连接线程逐步关闭
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
@@ -1350,7 +1350,7 @@ public class Client implements AutoCloseable {
 
   private void checkAsyncCall() throws IOException {
     if (isAsynchronousMode()) {
-      if (asyncCallCounter.incrementAndGet() > maxAsyncCalls) {
+      if (asyncCallCounter.incrementAndGet() > maxAsyncCalls) {                     // 限制异步调用的请求数量，默认同时最大 100 个异步调用
         asyncCallCounter.decrementAndGet();
         String errMsg = String.format(
             "Exceeded limit of max asynchronous calls: %d, " +
@@ -1378,7 +1378,7 @@ public class Client implements AutoCloseable {
    */
   Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
       ConnectionId remoteId, int serviceClass,
-      AtomicBoolean fallbackToSimpleAuth) throws IOException {
+      AtomicBoolean fallbackToSimpleAuth) throws IOException {                      // 客户端核心方法，发送 rpcRequest 到 remoteId，返回 rpcResponse
     final Call call = createCall(rpcKind, rpcRequest);
     final Connection connection = getConnection(remoteId, call, serviceClass,
         fallbackToSimpleAuth);
@@ -1386,7 +1386,7 @@ public class Client implements AutoCloseable {
     try {
       checkAsyncCall();
       try {
-        connection.sendRpcRequest(call);                 // send the rpc request
+        connection.sendRpcRequest(call);                 // send the rpc request    // 通过 connection 发送 rpc 请求 call，阻塞直到请求发送完成
       } catch (RejectedExecutionException e) {
         throw new IOException("connection has been closed", e);
       } catch (InterruptedException e) {
@@ -1395,7 +1395,7 @@ public class Client implements AutoCloseable {
         throw new IOException(e);
       }
     } catch(Exception e) {
-      if (isAsynchronousMode()) {
+      if (isAsynchronousMode()) {                                                   // 如果是异步获取响应，发生异常时需要释放异步计数器
         releaseAsyncCall();
       }
       throw e;
@@ -1403,10 +1403,10 @@ public class Client implements AutoCloseable {
 
     if (isAsynchronousMode()) {
       final AsyncGet<Writable, IOException> asyncGet
-          = new AsyncGet<Writable, IOException>() {
+          = new AsyncGet<Writable, IOException>() {                                 // 异步调用模式下，调用者线程会调用 asyncGet.get，获取 rpc 响应
         @Override
         public Writable get(long timeout, TimeUnit unit)
-            throws IOException, TimeoutException{
+            throws IOException, TimeoutException{                                   // 如果 timeout < 0，则没有超时时间，永久循环
           boolean done = true;
           try {
             final Writable w = getRpcResponse(call, connection, timeout, unit);
@@ -1418,7 +1418,7 @@ public class Client implements AutoCloseable {
             return w;
           } finally {
             if (done) {
-              releaseAsyncCall();
+              releaseAsyncCall();                                                   // 必须释放异步获取响应的计数器
             }
           }
         }
@@ -1431,10 +1431,10 @@ public class Client implements AutoCloseable {
         }
       };
 
-      ASYNC_RPC_RESPONSE.set(asyncGet);
+      ASYNC_RPC_RESPONSE.set(asyncGet);                                             // 在当前线程（调用线程）中异步获取 rpc 响应
       return null;
     } else {
-      return getRpcResponse(call, connection, -1, null);
+      return getRpcResponse(call, connection, -1, null);                            // 同步的 RPC 请求，没有超时时间
     }
   }
 
@@ -1445,7 +1445,7 @@ public class Client implements AutoCloseable {
    *          synchronous mode.
    */
   @Unstable
-  public static boolean isAsynchronousMode() {
+  public static boolean isAsynchronousMode() {                                      // 当前线程的 RPC 调用是否是异步的
     return asynchronousMode.get();
   }
 
@@ -1472,12 +1472,12 @@ public class Client implements AutoCloseable {
 
   /** @return the rpc response or, in case of timeout, null. */
   private Writable getRpcResponse(final Call call, final Connection connection,
-      final long timeout, final TimeUnit unit) throws IOException {
+      final long timeout, final TimeUnit unit) throws IOException {                 // 从 call 中获取 rpc 响应，最多等待 timeout
     synchronized (call) {
       while (!call.done) {
         try {
-          AsyncGet.Util.wait(call, timeout, unit);
-          if (timeout >= 0 && !call.done) {
+          AsyncGet.Util.wait(call, timeout, unit);                                  // 在 call 上 wait timeout 时间，等待被 connection 线程唤醒
+          if (timeout >= 0 && !call.done) {                                         // wait 会释放 call 锁，被唤醒时则重新获得 call 锁
             return null;
           }
         } catch (InterruptedException ie) {
@@ -1515,7 +1515,7 @@ public class Client implements AutoCloseable {
    * pool.  Connections to a given ConnectionId are reused. */
   private Connection getConnection(ConnectionId remoteId,
       Call call, int serviceClass, AtomicBoolean fallbackToSimpleAuth)
-      throws IOException {
+      throws IOException {                                                          // 从 connections 池中获取一个连接线程
     if (!running.get()) {
       // the client is stopped
       throw new IOException("The client is stopped");
@@ -1527,10 +1527,10 @@ public class Client implements AutoCloseable {
      */
     while (true) {
       // These lines below can be shorten with computeIfAbsent in Java8
-      connection = connections.get(remoteId);
+      connection = connections.get(remoteId);                                       // 每个 remoteId 只会对于一个连接线程 connection
       if (connection == null) {
         connection = new Connection(remoteId, serviceClass);
-        Connection existing = connections.putIfAbsent(remoteId, connection);
+        Connection existing = connections.putIfAbsent(remoteId, connection);        // 别的调用线程可能已经存入了一个 connection
         if (existing != null) {
           connection = existing;
         }
@@ -1543,13 +1543,13 @@ public class Client implements AutoCloseable {
         // have already known this closedConnection, and replace it with a new
         // connection. So we should call conditional remove to make sure we only
         // remove this closedConnection.
-        connections.remove(remoteId, connection);
+        connections.remove(remoteId, connection);                                   // 表明 connection 这个连接已经关闭了，需要手动删除它
       }
     }
 
     // If the server happens to be slow, the method below will take longer to
     // establish a connection.
-    connection.setupIOstreams(fallbackToSimpleAuth);
+    connection.setupIOstreams(fallbackToSimpleAuth);                                // 建立客户端到服务端的连接并建立 i/o 流，发送请求头并启动连接线程
     return connection;
   }
   
@@ -1559,11 +1559,11 @@ public class Client implements AutoCloseable {
    */
   @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
   @InterfaceStability.Evolving
-  public static class ConnectionId {
-    InetSocketAddress address;
+  public static class ConnectionId {                                                // 包含服务端address、用户ugi，用于表示一个 RPC connection
+    InetSocketAddress address;                                                      // <address, protocol, ticket> 唯一表示一个 RPC connection
     UserGroupInformation ticket;
     final Class<?> protocol;
-    private static final int PRIME = 16777619;
+    private static final int PRIME = 16777619;                                      // 32位字符串 hash 使用的质数
     private final int rpcTimeout;
     private final int maxIdleTime; //connections will be culled if it was idle for 
     //maxIdleTime msecs
@@ -1581,24 +1581,24 @@ public class Client implements AutoCloseable {
     ConnectionId(InetSocketAddress address, Class<?> protocol, 
                  UserGroupInformation ticket, int rpcTimeout,
                  RetryPolicy connectionRetryPolicy, Configuration conf) {
-      this.protocol = protocol;
-      this.address = address;
-      this.ticket = ticket;
-      this.rpcTimeout = rpcTimeout;
-      this.connectionRetryPolicy = connectionRetryPolicy;
+      this.protocol = protocol;                                                     // RPC 协议的实现类
+      this.address = address;                                                       // 服务端 ip:port
+      this.ticket = ticket;                                                         // ugi，即通过认证的用户
+      this.rpcTimeout = rpcTimeout;                                                 // rpc 请求超时时间
+      this.connectionRetryPolicy = connectionRetryPolicy;                           // 非连接超时导致的连接失败的重试策略
 
       this.maxIdleTime = conf.getInt(
           CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
-          CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT);
+          CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT);   // 默认线程最大空闲等待时间 10s
       this.maxRetriesOnSasl = conf.getInt(
           CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY,
-          CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT);
+          CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT);    // 默认 sasl 最大重试次数 5 次
       this.maxRetriesOnSocketTimeouts = conf.getInt(
           CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
-          CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT);
+          CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT); // 默认 socket 超时最大重试次数 45 次
       this.tcpNoDelay = conf.getBoolean(
           CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_KEY,
-          CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_DEFAULT);
+          CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_DEFAULT);               // 默认不启动 Nagle 算法
       this.tcpLowLatency = conf.getBoolean(
           CommonConfigurationKeysPublic.IPC_CLIENT_LOW_LATENCY,
           CommonConfigurationKeysPublic.IPC_CLIENT_LOW_LATENCY_DEFAULT
@@ -1606,7 +1606,7 @@ public class Client implements AutoCloseable {
       this.doPing = conf.getBoolean(
           CommonConfigurationKeys.IPC_CLIENT_PING_KEY,
           CommonConfigurationKeys.IPC_CLIENT_PING_DEFAULT);
-      this.pingInterval = (doPing ? Client.getPingInterval(conf) : 0);
+      this.pingInterval = (doPing ? Client.getPingInterval(conf) : 0);              // 默认 每分钟执行 ping 请求一次，如果不发送 ping，则该值为 0
       this.conf = conf;
     }
     
@@ -1674,7 +1674,7 @@ public class Client implements AutoCloseable {
      */
     static ConnectionId getConnectionId(InetSocketAddress addr,
         Class<?> protocol, UserGroupInformation ticket, int rpcTimeout,
-        RetryPolicy connectionRetryPolicy, Configuration conf) throws IOException {
+        RetryPolicy connectionRetryPolicy, Configuration conf) throws IOException { // 创建 ConnectionId 的唯一方法
 
       if (connectionRetryPolicy == null) {
         final int max = conf.getInt(
@@ -1686,7 +1686,7 @@ public class Client implements AutoCloseable {
                 .IPC_CLIENT_CONNECT_RETRY_INTERVAL_DEFAULT);
 
         connectionRetryPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
-            max, retryInterval, TimeUnit.MILLISECONDS);
+            max, retryInterval, TimeUnit.MILLISECONDS);                             // 默认的 rpc 连接失败重试策略：每秒钟重试一次，最多 10 次
       }
 
       return new ConnectionId(addr, protocol, ticket, rpcTimeout,
@@ -1747,7 +1747,7 @@ public class Client implements AutoCloseable {
    * 
    * @return next call ID
    */
-  public static int nextCallId() {
+  public static int nextCallId() {                                                  // 获取一个 rpc 请求的唯一 id，目前只能是正数
     return callIdCounter.getAndIncrement() & 0x7FFFFFFF;
   }
 
@@ -1761,13 +1761,13 @@ public class Client implements AutoCloseable {
    *  Only exposed for use by SaslRpcClient.
    */
   @InterfaceAudience.Private
-  public static class IpcStreams implements Closeable, Flushable {
+  public static class IpcStreams implements Closeable, Flushable {                  // 管理 IPC 连接的输入和输出流，只供 Sasl Rpc 客户端使用
     private DataInputStream in;
     public DataOutputStream out;
     private int maxResponseLength;
     private boolean firstResponse = true;
 
-    IpcStreams(Socket socket, int maxResponseLength) throws IOException {
+    IpcStreams(Socket socket, int maxResponseLength) throws IOException {           // 从 socket 构造 rpc 的输入和输出流
       this.maxResponseLength = maxResponseLength;
       setInputStream(
           new BufferedInputStream(NetUtils.getInputStream(socket)));
@@ -1775,14 +1775,14 @@ public class Client implements AutoCloseable {
           new BufferedOutputStream(NetUtils.getOutputStream(socket)));
     }
 
-    void setSaslClient(SaslRpcClient client) throws IOException {
+    void setSaslClient(SaslRpcClient client) throws IOException {                   // 直接从客户端构造输入输出流，复用 socket 流
       // Wrap the input stream in a BufferedInputStream to fill the buffer
       // before reading its length (HADOOP-14062).
       setInputStream(new BufferedInputStream(client.getInputStream(in)));
       setOutputStream(client.getOutputStream(out));
     }
 
-    private void setInputStream(InputStream is) {
+    private void setInputStream(InputStream is) {                                   // 设置 ipc 输入输出流，这里只是对流做一个包装
       this.in = (is instanceof DataInputStream)
           ? (DataInputStream)is : new DataInputStream(is);
     }
@@ -1792,13 +1792,13 @@ public class Client implements AutoCloseable {
           ? (DataOutputStream)os : new DataOutputStream(os);
     }
 
-    public ByteBuffer readResponse() throws IOException {
+    public ByteBuffer readResponse() throws IOException {                           // ipc 请求是连续的，通过一次方法调用可以读取到完整的 proto
       int length = in.readInt();
       if (firstResponse) {
         firstResponse = false;
         // pre-rpcv9 exception, almost certainly a version mismatch.
         if (length == -1) {
-          in.readInt(); // ignore fatal/error status, it's fatal for us.
+          in.readInt(); // ignore fatal/error status, it's fatal for us.            // 首次请求可能会输出第一个字节是 -1
           throw new RemoteException(WritableUtils.readString(in),
                                     WritableUtils.readString(in));
         }
@@ -1819,7 +1819,7 @@ public class Client implements AutoCloseable {
     }
 
     @Override
-    public void flush() throws IOException {
+    public void flush() throws IOException {                                        // flush 之后数据才会发送出去
       out.flush();
     }
 

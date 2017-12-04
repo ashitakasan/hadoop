@@ -353,7 +353,7 @@ public class SaslRpcClient {
    * @return AuthMethod used to negotiate the connection
    * @throws IOException
    */
-  public AuthMethod saslConnect(IpcStreams ipcStreams) throws IOException {         // 通过给定的输入流和输出流与服务器进行 SASL 验证
+  public AuthMethod saslConnect(IpcStreams ipcStreams) throws IOException {         // 通过给定的输入流和输出流与服务器进行 SASL 认证
     // redefined if/when a SASL negotiation starts, can be queried if the
     // negotiation fails
     authMethod = AuthMethod.SIMPLE;
@@ -362,7 +362,7 @@ public class SaslRpcClient {
     // loop until sasl is complete or a rpc error occurs
     boolean done = false;
     do {
-      ByteBuffer bb = ipcStreams.readResponse();                                    // 从 ipcStreams 中读取数据，解析数据，进行验证
+      ByteBuffer bb = ipcStreams.readResponse();                                    // 从 ipcStreams 中读取数据，解析数据，进行认证
 
       RpcWritable.Buffer saslPacket = RpcWritable.Buffer.wrap(bb);
       RpcResponseHeaderProto header =
@@ -385,7 +385,7 @@ public class SaslRpcClient {
       // handle sasl negotiation process
       RpcSaslProto.Builder response = null;
       switch (saslMessage.getState()) {
-        case NEGOTIATE: {                                                           // 初次通信需要 NEGOTIATE 进行验证
+        case NEGOTIATE: {                                                           // 初次通信需要 NEGOTIATE 进行认证
           // create a compatible SASL client, throws if no supported auths
           SaslAuth saslAuthType = selectSaslClient(saslMessage.getAuthsList());
           // define auth being attempted, caller can query if connect fails
@@ -627,12 +627,12 @@ public class SaslRpcClient {
       if (LOG.isDebugEnabled()) {
         LOG.debug("wrapping token of length:" + len);
       }
-      buf = saslClient.wrap(buf, off, len);
+      buf = saslClient.wrap(buf, off, len);                                         // 首先将数据封装为 RpcSaslProto，然后写入
       RpcSaslProto saslMessage = RpcSaslProto.newBuilder()
           .setState(SaslState.WRAP)
           .setToken(ByteString.copyFrom(buf, 0, buf.length))
           .build();
-      sendSaslMessage(out, saslMessage);
+      sendSaslMessage(out, saslMessage);                                            // 客户端数据通过这里写入传到服务端
     }
   }
 

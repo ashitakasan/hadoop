@@ -31,7 +31,7 @@ import java.util.concurrent.TimeoutException;
  * @param <R> The type of the return value.
  * @param <E> The exception type that the underlying implementation may throw.
  */
-public interface AsyncGet<R, E extends Throwable> {
+public interface AsyncGet<R, E extends Throwable> {                                 // 异步获取的接口，如果结果还在计算中，则 get 方法抛出 Timeout 异常
   /**
    * Get the result.
    *
