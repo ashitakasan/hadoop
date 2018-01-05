@@ -80,7 +80,7 @@ public class CallQueueManager<E extends Schedulable>
         priorityLevels, maxQueueSize, namespace, conf);
     this.clientBackOffEnabled = clientBackOffEnabled;
     this.putRef = new AtomicReference<BlockingQueue<E>>(bq);
-    this.takeRef = new AtomicReference<BlockingQueue<E>>(bq);
+    this.takeRef = new AtomicReference<BlockingQueue<E>>(bq);                       // putRef、takeRef 引用的是一个 BlockingQueue，默认实现为 Linked
     LOG.info("Using callQueue: " + backingClass + " queueCapacity: " +
         maxQueueSize + " scheduler: " + schedulerClass);
   }
@@ -218,7 +218,7 @@ public class CallQueueManager<E extends Schedulable>
   public void put(E e) throws InterruptedException {
     if (!isClientBackoffEnabled()) {
       putRef.get().put(e);
-    } else if (shouldBackOff(e)) {
+    } else if (shouldBackOff(e)) {                                                  // 将 call 放入 scheduler 中，以便获取调用优先级
       throwBackoff();
     } else {
       add(e);
@@ -334,22 +334,22 @@ public class CallQueueManager<E extends Schedulable>
   public synchronized void swapQueue(
       Class<? extends RpcScheduler> schedulerClass,
       Class<? extends BlockingQueue<E>> queueClassToUse, int maxSize,
-      String ns, Configuration conf) {
+      String ns, Configuration conf) {                                              // 运行时修改 callQueue 的实现类
     int priorityLevels = parseNumLevels(ns, conf);
     this.scheduler.stop();
     RpcScheduler newScheduler = createScheduler(schedulerClass, priorityLevels,
         ns, conf);
     BlockingQueue<E> newQ = createCallQueueInstance(queueClassToUse,
-        priorityLevels, maxSize, ns, conf);
+        priorityLevels, maxSize, ns, conf);                                         // 根据新的配置构造 callQueue 的实现类
 
     // Our current queue becomes the old queue
     BlockingQueue<E> oldQ = putRef.get();
 
     // Swap putRef first: allow blocked puts() to be unblocked
-    putRef.set(newQ);
+    putRef.set(newQ);                                                               // 新的 rpc 先放到新创建的队列中
 
     // Wait for handlers to drain the oldQ
-    while (!queueIsReallyEmpty(oldQ)) {}
+    while (!queueIsReallyEmpty(oldQ)) {}                                            // 等待旧的队列中的 rpc 全部执行完毕，再切换队列
 
     // Swap takeRef to handle new calls
     takeRef.set(newQ);

@@ -134,11 +134,11 @@ import org.slf4j.LoggerFactory;
  */
 @Public
 @InterfaceStability.Evolving
-public abstract class Server {
+public abstract class Server {                                                      // IPC 服务器
   private final boolean authorize;
-  private List<AuthMethod> enabledAuthMethods;
-  private RpcSaslProto negotiateResponse;
-  private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
+  private List<AuthMethod> enabledAuthMethods;                                      // rpc 请求认证方式
+  private RpcSaslProto negotiateResponse;                                           // 安全认证时需要的协商请求
+  private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();            // 异常处理器
   private Tracer tracer;
   
   /**
@@ -163,7 +163,7 @@ public abstract class Server {
    * ExceptionsHandler manages Exception groups for special handling
    * e.g., terse exception group for concise logging messages
    */
-  static class ExceptionsHandler {
+  static class ExceptionsHandler {                                                  // 异常处理器，主要决定异常日志如何打印
     private volatile Set<String> terseExceptions = new HashSet<>();
     private volatile Set<String> suppressedExceptions = new HashSet<>();
 
@@ -172,7 +172,7 @@ public abstract class Server {
      * Optimized for infrequent invocation.
      * @param exceptionClass exception classes 
      */
-    void addTerseLoggingExceptions(Class<?>... exceptionClass) {
+    void addTerseLoggingExceptions(Class<?>... exceptionClass) {                    // 添加异常类，其中服务器不会记录堆栈跟踪，只是打印简单的错误信息
       // Thread-safe replacement of terseExceptions.
       terseExceptions = addExceptions(terseExceptions, exceptionClass);
     }
@@ -182,7 +182,7 @@ public abstract class Server {
      * Optimized for infrequent invocation.
      * @param exceptionClass exception classes
      */
-    void addSuppressedLoggingExceptions(Class<?>... exceptionClass) {
+    void addSuppressedLoggingExceptions(Class<?>... exceptionClass) {               // 添加异常类，其中服务器不会记录堆栈跟踪，任何异常也不打印
       // Thread-safe replacement of suppressedExceptions.
       suppressedExceptions = addExceptions(
           suppressedExceptions, exceptionClass);
@@ -202,7 +202,7 @@ public abstract class Server {
      * @return
      */
     private static Set<String> addExceptions(
-        final Set<String> exceptionsSet, Class<?>[] exceptionClass) {
+        final Set<String> exceptionsSet, Class<?>[] exceptionClass) {               // 将 exceptionClass 加到 exceptionsSet 中并返回新的，防止旧引用
       // Make a copy of the exceptionSet for performing modification
       final HashSet<String> newSet = new HashSet<>(exceptionsSet);
 
@@ -221,7 +221,7 @@ public abstract class Server {
    * and send back a nicer response.
    */
   private static final ByteBuffer HTTP_GET_BYTES = ByteBuffer.wrap(
-      "GET ".getBytes(StandardCharsets.UTF_8));
+      "GET ".getBytes(StandardCharsets.UTF_8));                                     // 检测发送到 rpc 端口上的 http get 请求并回复一条消息
   
   /**
    * An HTTP response to send back if we detect an HTTP request to our IPC
@@ -248,7 +248,7 @@ public abstract class Server {
       this.rpcRequestWrapperClass = rpcRequestWrapperClass;
     }   
   }
-  static Map<RPC.RpcKind, RpcKindMapValue> rpcKindMap = new HashMap<>(4);
+  static Map<RPC.RpcKind, RpcKindMapValue> rpcKindMap = new HashMap<>(4);           // rpc 类型和对应的序列化类型列表
   
   
 
@@ -264,7 +264,7 @@ public abstract class Server {
   
   public static void registerProtocolEngine(RPC.RpcKind rpcKind, 
           Class<? extends Writable> rpcRequestWrapperClass,
-          RpcInvoker rpcInvoker) {
+          RpcInvoker rpcInvoker) {                                                  // 服务启动后就会调用该方法，注册RPC种类和类以反序列化rpc请求
     RpcKindMapValue  old = 
         rpcKindMap.put(rpcKind, new RpcKindMapValue(rpcRequestWrapperClass, rpcInvoker));
     if (old != null) {
@@ -283,11 +283,11 @@ public abstract class Server {
       RpcKindProto rpcKind) {
     if (rpcRequestClass != null)
        return rpcRequestClass;
-    RpcKindMapValue val = rpcKindMap.get(ProtoUtil.convert(rpcKind));
+    RpcKindMapValue val = rpcKindMap.get(ProtoUtil.convert(rpcKind));               // 获取指定的 rpc 类型的 序列化类
     return (val == null) ? null : val.rpcRequestWrapperClass; 
   }
   
-  public static RpcInvoker  getRpcInvoker(RPC.RpcKind rpcKind) {
+  public static RpcInvoker  getRpcInvoker(RPC.RpcKind rpcKind) {                    // 获取指定的 rpc 类型的调用者
     RpcKindMapValue val = rpcKindMap.get(rpcKind);
     return (val == null) ? null : val.rpcInvoker; 
   }
@@ -299,10 +299,10 @@ public abstract class Server {
   private static final String AUTH_FAILED_FOR = "Auth failed for ";
   private static final String AUTH_SUCCESSFUL_FOR = "Auth successful for ";
   
-  private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
+  private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();      // 在 Listener、Responder、Handler 中保存当前 server 对象
 
   private static final Map<String, Class<?>> PROTOCOL_CACHE = 
-    new ConcurrentHashMap<String, Class<?>>();
+    new ConcurrentHashMap<String, Class<?>>();                                      // 缓存 proto 接口对应的实现类
   
   static Class<?> getProtocolClass(String protocolName, Configuration conf) 
   throws ClassNotFoundException {
@@ -325,11 +325,11 @@ public abstract class Server {
   /** This is set to Call object before Handler invokes an RPC and reset
    * after the call returns.
    */
-  private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
+  private static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();         // 当前的 handler 线程中设置正在处理的 rpc call
   
   /** Get the current call */
   @VisibleForTesting
-  public static ThreadLocal<Call> getCurCall() {
+  public static ThreadLocal<Call> getCurCall() {                                    // 获取当前线程中的 rpc call 对象
     return CurCall;
   }
   
@@ -340,7 +340,7 @@ public abstract class Server {
    * 
    * @return int sequential ID number of currently active RPC call
    */
-  public static int getCallId() {
+  public static int getCallId() {                                                   // 获取当前线程中的 rpc call ID，负数表示当前线程没有正在处理的 rpc
     Call call = CurCall.get();
     return call != null ? call.callId : RpcConstants.INVALID_CALL_ID;
   }
@@ -349,7 +349,7 @@ public abstract class Server {
    * @return The current active RPC call's retry count. -1 indicates the retry
    *         cache is not supported in the client side.
    */
-  public static int getCallRetryCount() {
+  public static int getCallRetryCount() {                                           // 获取当前线程中的 rpc call 重试次数
     Call call = CurCall.get();
     return call != null ? call.retryCount : RpcConstants.INVALID_RETRY_COUNT;
   }
@@ -357,7 +357,7 @@ public abstract class Server {
   /** Returns the remote side ip address when invoked inside an RPC 
    *  Returns null incase of an error.
    */
-  public static InetAddress getRemoteIp() {
+  public static InetAddress getRemoteIp() {                                         // 获取当前线程中的 rpc call 远程地址
     Call call = CurCall.get();
     return (call != null ) ? call.getHostInetAddress() : null;
   }
@@ -365,7 +365,7 @@ public abstract class Server {
   /**
    * Returns the clientId from the current RPC request
    */
-  public static byte[] getClientId() {
+  public static byte[] getClientId() {                                              // 获取当前线程中的 rpc call client ID
     Call call = CurCall.get();
     return call != null ? call.clientId : RpcConstants.DUMMY_CLIENT_ID;
   }
@@ -373,7 +373,7 @@ public abstract class Server {
   /** Returns remote address as a string when invoked inside an RPC.
    *  Returns null in case of an error.
    */
-  public static String getRemoteAddress() {
+  public static String getRemoteAddress() {                                         // 获取远程 rpc 地址
     InetAddress addr = getRemoteIp();
     return (addr == null) ? null : addr.getHostAddress();
   }
@@ -382,19 +382,19 @@ public abstract class Server {
    *  may be different than the current user if called within another doAs
    *  @return connection's UGI or null if not an RPC
    */
-  public static UserGroupInformation getRemoteUser() {
+  public static UserGroupInformation getRemoteUser() {                              // 获取当前线程中的 rpc call 的远程 user
     Call call = CurCall.get();
     return (call != null) ? call.getRemoteUser() : null;
   }
 
-  public static String getProtocol() {
+  public static String getProtocol() {                                              // 获取当前线程中的 rpc call 协议
     Call call = CurCall.get();
     return (call != null) ? call.getProtocol() : null;
   }
 
   /** Return true if the invocation was through an RPC.
    */
-  public static boolean isRpcInvocation() {
+  public static boolean isRpcInvocation() {                                         // 当前线程是否正在进行 rpc 调用
     return CurCall.get() != null;
   }
 
@@ -402,49 +402,49 @@ public abstract class Server {
    * Return the priority level assigned by call queue to an RPC
    * Returns 0 in case no priority is assigned.
    */
-  public static int getPriorityLevel() {
+  public static int getPriorityLevel() {                                            // 获取当前线程中的 rpc call 优先级
     Call call = CurCall.get();
     return call != null? call.getPriorityLevel() : 0;
   }
 
-  private String bindAddress; 
-  private int port;                               // port we listen on
-  private int handlerCount;                       // number of handler threads
-  private int readThreads;                        // number of read threads
-  private int readerPendingConnectionQueue;         // number of connections to queue per read thread
-  private Class<? extends Writable> rpcRequestClass;   // class used for deserializing the rpc request
+  private String bindAddress;                                                       // 当前 RPC 服务绑定地址
+  private int port;                               // port we listen on              // 当前 RPC 服务绑定端口
+  private int handlerCount;                       // number of handler threads      // 处理 RPC 请求的线程数量
+  private int readThreads;                        // number of read threads         // 读取 RPC 请求的线程数量
+  private int readerPendingConnectionQueue;         // number of connections to queue per read thread   // 每个读线程的连接数
+  private Class<? extends Writable> rpcRequestClass;   // class used for deserializing the rpc request  // 用于反序列化rpc请求的类，默认为空
   final protected RpcMetrics rpcMetrics;
-  final protected RpcDetailedMetrics rpcDetailedMetrics;
+  final protected RpcDetailedMetrics rpcDetailedMetrics;                            // 统计 RPC 指标的两个对象
   
   private Configuration conf;
-  private String portRangeConfig = null;
-  private SecretManager<TokenIdentifier> secretManager;
-  private SaslPropertiesResolver saslPropsResolver;
-  private ServiceAuthorizationManager serviceAuthorizationManager = new ServiceAuthorizationManager();
+  private String portRangeConfig = null;                                            // 指定本地可绑定端口的范围
+  private SecretManager<TokenIdentifier> secretManager;                             // 服务端的密钥管理器，用于给 rpc 客户端分发 token
+  private SaslPropertiesResolver saslPropsResolver;                                 // sasl 服务的属性
+  private ServiceAuthorizationManager serviceAuthorizationManager = new ServiceAuthorizationManager();  // 服务级别的请求的授权管理器，为服务指定 ACL
 
-  private int maxQueueSize;
-  private final int maxRespSize;
+  private int maxQueueSize;                                                         // rpc call 队列最大长度
+  private final int maxRespSize;                                                    // rpc call 最大响应大小，默认 1M
   private final ThreadLocal<ResponseBuffer> responseBuffer =
       new ThreadLocal<ResponseBuffer>(){
         @Override
         protected ResponseBuffer initialValue() {
           return new ResponseBuffer(INITIAL_RESP_BUF_SIZE);
         }
-  };
-  private int socketSendBufferSize;
-  private final int maxDataLength;
-  private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+  };                                                                                // rpc 响应缓存大小，默认 10KB
+  private int socketSendBufferSize;                                                 // socket 缓存大小
+  private final int maxDataLength;                                                  // 通过 rpc 请求的最大可传输数据量，默认为 64M
+  private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm          // tcp nagle 算法
 
-  volatile private boolean running = true;         // true while server runs
-  private CallQueueManager<Call> callQueue;
+  volatile private boolean running = true;         // true while server runs        // 表明当前 rpc 服务是否正在运行中
+  private CallQueueManager<Call> callQueue;                                         // rpc 队列管理
 
   // maintains the set of client connections and handles idle timeouts
-  private ConnectionManager connectionManager;
+  private ConnectionManager connectionManager;                                      // connect 连接管理器
   private Listener listener = null;
   private Responder responder = null;
-  private Handler[] handlers = null;
+  private Handler[] handlers = null;                                                // 默认启动一个 listener、一个 responder、多个 handlers
 
-  private boolean logSlowRPC = false;
+  private boolean logSlowRPC = false;                                               // 默认不记录慢 rpc 请求
 
   /**
    * Checks if LogSlowRPC is set true.
@@ -477,7 +477,7 @@ public abstract class Server {
    * if and only if it falls above 99.7% of requests. We start this logic
    * only once we have enough sample size.
    */
-  void logSlowRpcCalls(String methodName, int processingTime) {
+  void logSlowRpcCalls(String methodName, int processingTime) {                     // 记录慢的 rpc 请求，请求时间大于 99.7% 的 rpc 才算慢
     final int deviation = 3;
 
     // 1024 for minSampleSize just a guess -- not a number computed based on
@@ -486,7 +486,7 @@ public abstract class Server {
     // in practice.
     final int minSampleSize = 1024;
     final double threeSigma = rpcMetrics.getProcessingMean() +
-        (rpcMetrics.getProcessingStdDev() * deviation);
+        (rpcMetrics.getProcessingStdDev() * deviation);                             // 计算 rpc 请求的 (平均值 + 三倍标准差)，如果超过则算慢请求
 
     if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
         (processingTime > threeSigma)) {
@@ -501,7 +501,7 @@ public abstract class Server {
   }
 
   void updateMetrics(String name, int queueTime, int processingTime,
-                     boolean deferredCall) {
+                     boolean deferredCall) {                                        // 记录 rpc 指标，name 为 rpc 方法名
     rpcMetrics.addRpcQueueTime(queueTime);
     if (!deferredCall) {
       rpcMetrics.addRpcProcessingTime(processingTime);
@@ -514,7 +514,7 @@ public abstract class Server {
     }
   }
 
-  void updateDeferredMetrics(String name, long processingTime) {
+  void updateDeferredMetrics(String name, long processingTime) {                    // 更新 rpc 延迟指标
     rpcMetrics.addDeferredRpcProcessingTime(processingTime);
     rpcDetailedMetrics.addDeferredProcessingTime(name, processingTime);
   }
@@ -535,7 +535,7 @@ public abstract class Server {
   }
 
   public static void bind(ServerSocket socket, InetSocketAddress address, 
-      int backlog, Configuration conf, String rangeConf) throws IOException {
+      int backlog, Configuration conf, String rangeConf) throws IOException {       // 绑定 socket 到一个 地址、端口上
     try {
       IntegerRanges range = null;
       if (rangeConf != null) {
@@ -593,7 +593,7 @@ public abstract class Server {
   /**
    * Refresh the service authorization ACL for the service handled by this server.
    */
-  public void refreshServiceAcl(Configuration conf, PolicyProvider provider) {
+  public void refreshServiceAcl(Configuration conf, PolicyProvider provider) {      // 刷新此服务器处理的服务的服务授权ACL
     serviceAuthorizationManager.refresh(conf, provider);
   }
 
@@ -620,14 +620,14 @@ public abstract class Server {
   }
 
   static Class<? extends BlockingQueue<Call>> getQueueClass(
-      String prefix, Configuration conf) {
+      String prefix, Configuration conf) {                                          // 获取 rpc queue 管理器的实现类
     String name = prefix + "." + CommonConfigurationKeys.IPC_CALLQUEUE_IMPL_KEY;
     Class<?> queueClass = conf.getClass(name, LinkedBlockingQueue.class);
     return CallQueueManager.convertQueueClass(queueClass, Call.class);
   }
 
   static Class<? extends RpcScheduler> getSchedulerClass(
-      String prefix, Configuration conf) {
+      String prefix, Configuration conf) {                                          // 获取 rpc queue 调度器，有默认的和 Fair 的两种
     String schedulerKeyname = prefix + "." + CommonConfigurationKeys
         .IPC_SCHEDULER_IMPL_KEY;
     Class<?> schedulerClass = conf.getClass(schedulerKeyname, null);
@@ -639,7 +639,7 @@ public abstract class Server {
       Class<?> queueClass = conf.getClass(queueKeyName, null);
       if (queueClass != null) {
         if (queueClass.getCanonicalName().equals(
-            FairCallQueue.class.getCanonicalName())) {
+            FairCallQueue.class.getCanonicalName())) {                              // 公平队列管理器 必须设置 DecayRpcScheduler 调度器
           conf.setClass(schedulerKeyname, DecayRpcScheduler.class,
               RpcScheduler.class);
         }
@@ -658,14 +658,14 @@ public abstract class Server {
     // Create the next queue
     String prefix = getQueueClassPrefix();
     callQueue.swapQueue(getSchedulerClass(prefix, conf),
-        getQueueClass(prefix, conf), maxQueueSize, prefix, conf);
+        getQueueClass(prefix, conf), maxQueueSize, prefix, conf);                   // 使用新的调度方式重新调整 rpc call 队列
   }
 
   /**
    * Get from config if client backoff is enabled on that port.
    */
   static boolean getClientBackoffEnable(
-      String prefix, Configuration conf) {
+      String prefix, Configuration conf) {                                          // 该端口上启用了客户端 退避算法
     String name = prefix + "." +
         CommonConfigurationKeys.IPC_BACKOFF_ENABLE;
     return conf.getBoolean(name,
@@ -674,18 +674,18 @@ public abstract class Server {
 
   /** A generic call queued for handling. */
   public static class Call implements Schedulable,
-  PrivilegedExceptionAction<Void> {
-    final int callId;            // the client's call id
-    final int retryCount;        // the retry count of the call
-    long timestamp;              // time received when response is null
+  PrivilegedExceptionAction<Void> {                                                 // 一个抽象的等待处理的 rpc 请求
+    final int callId;            // the client's call id                            // call ID
+    final int retryCount;        // the retry count of the call                     // 重试次数
+    long timestamp;              // time received when response is null             // 如果 response 为空则表示接收时间，否则表示处理时间
                                  // time served when response is not null
-    private AtomicInteger responseWaitCount = new AtomicInteger(1);
-    final RPC.RpcKind rpcKind;
+    private AtomicInteger responseWaitCount = new AtomicInteger(1);                 // rpc 延迟响应计数，默认不会使用
+    final RPC.RpcKind rpcKind;                                                      // rpc 调用类型
     final byte[] clientId;
     private final TraceScope traceScope; // the HTrace scope on the server side
-    private final CallerContext callerContext; // the call context
-    private boolean deferredResponse = false;
-    private int priorityLevel;
+    private final CallerContext callerContext; // the call context                  // rpc 调用上下文，包含 context 和 signature
+    private boolean deferredResponse = false;                                       // 是否延迟响应
+    private int priorityLevel;                                                      // 由调度程序指定的优先级，默认为 0
     // the priority level assigned by scheduler, 0 by default
 
     Call() {
@@ -753,14 +753,14 @@ public abstract class Server {
      */
     @InterfaceStability.Unstable
     @InterfaceAudience.LimitedPrivate({"HDFS"})
-    public final void postponeResponse() {
+    public final void postponeResponse() {                                          // 允许IPC响应被延迟，而不是在处理程序从代理方法返回后立即发送
       int count = responseWaitCount.incrementAndGet();
       assert count > 0 : "response has already been sent";
     }
 
     @InterfaceStability.Unstable
     @InterfaceAudience.LimitedPrivate({"HDFS"})
-    public final void sendResponse() throws IOException {
+    public final void sendResponse() throws IOException {                           // 准备发送响应数据
       int count = responseWaitCount.decrementAndGet();
       assert count >= 0 : "response has already been sent";
       if (count == 0) {
@@ -795,7 +795,7 @@ public abstract class Server {
     }
 
     @InterfaceStability.Unstable
-    public void deferResponse() {
+    public void deferResponse() {                                                   // 启动退避算法，这里默认没有被调用
       this.deferredResponse = true;
     }
 
@@ -812,10 +812,10 @@ public abstract class Server {
   }
 
   /** A RPC extended call queued for handling. */
-  private class RpcCall extends Call {
-    final Connection connection;  // connection to client
-    final Writable rpcRequest;    // Serialized Rpc request from client
-    ByteBuffer rpcResponse;       // the response for this call
+  private class RpcCall extends Call {                                              // 等待处理的真实的 rpc 调用对象
+    final Connection connection;  // connection to client                           // 请求的连接
+    final Writable rpcRequest;    // Serialized Rpc request from client             // rpc 请求对象
+    ByteBuffer rpcResponse;       // the response for this call                     // rpc 响应对象
 
     RpcCall(RpcCall call) {
       super(call);
@@ -857,7 +857,7 @@ public abstract class Server {
     }
 
     @Override
-    public Void run() throws Exception {
+    public Void run() throws Exception {                                            // 处理该 rpc 请求时调用的方法
       if (!connection.channel.isOpen()) {
         Server.LOG.info(Thread.currentThread().getName() + ": skipped " + this);
         return null;
@@ -867,15 +867,15 @@ public abstract class Server {
 
       try {
         value = call(
-            rpcKind, connection.protocolName, rpcRequest, timestamp);
+            rpcKind, connection.protocolName, rpcRequest, timestamp);               // 真正的处理 RPC 请求的方法调用的地方，返回 value 为序列化后的响应
       } catch (Throwable e) {
-        populateResponseParamsOnError(e, responseParams);
+        populateResponseParamsOnError(e, responseParams);                           // 如果调用异常，则根据异常类型修改 responseParams
       }
       if (!isResponseDeferred()) {
         setupResponse(this, responseParams.returnStatus,
             responseParams.detailedErr,
-            value, responseParams.errorClass, responseParams.error);
-        sendResponse();
+            value, responseParams.errorClass, responseParams.error);                // 初始化 rpc 响应
+        sendResponse();                                                             // 回复响应到客户端
       } else {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Deferring response for callId: " + this.callId);
@@ -898,7 +898,7 @@ public abstract class Server {
       if (t instanceof RpcServerException) {
         RpcServerException rse = ((RpcServerException) t);
         responseParams.returnStatus = rse.getRpcStatusProto();
-        responseParams.detailedErr = rse.getRpcErrorCodeProto();
+        responseParams.detailedErr = rse.getRpcErrorCodeProto();                    // 如果是 RpcServer 异常，则将异常信息标记为 ERROR_RPC_SERVER
       } else {
         responseParams.returnStatus = RpcStatusProto.ERROR;
         responseParams.detailedErr = RpcErrorCodeProto.ERROR_APPLICATION;
@@ -908,29 +908,29 @@ public abstract class Server {
       // Remove redundant error class name from the beginning of the
       // stack trace
       String exceptionHdr = responseParams.errorClass + ": ";
-      if (responseParams.error.startsWith(exceptionHdr)) {
+      if (responseParams.error.startsWith(exceptionHdr)) {                          // 移除异常类名
         responseParams.error =
             responseParams.error.substring(exceptionHdr.length());
       }
     }
 
-    void setResponse(ByteBuffer response) throws IOException {
+    void setResponse(ByteBuffer response) throws IOException {                      // 设置当前请求的响应数据
       this.rpcResponse = response;
     }
 
     @Override
-    void doResponse(Throwable t) throws IOException {
+    void doResponse(Throwable t) throws IOException {                               // 准备发送响应数据，t 为空表示正常的响应数据
       RpcCall call = this;
       if (t != null) {
         // clone the call to prevent a race with another thread stomping
         // on the response while being sent.  the original call is
         // effectively discarded since the wait count won't hit zero
-        call = new RpcCall(this);
+        call = new RpcCall(this);                                                   // 在发送时，克隆调用以防止另一个线程在响应上线程冲突
         setupResponse(call,
             RpcStatusProto.FATAL, RpcErrorCodeProto.ERROR_RPC_SERVER,
-            null, t.getClass().getName(), StringUtils.stringifyException(t));
+            null, t.getClass().getName(), StringUtils.stringifyException(t));       // 如果有异常，则直接返回错误请求
       }
-      connection.sendResponse(call);
+      connection.sendResponse(call);                                                // 使用当前连接返回 rpc 响应数据，一般是正常的响应
     }
 
     /**
@@ -938,7 +938,7 @@ public abstract class Server {
      */
     private void sendDeferedResponse() {
       try {
-        connection.sendResponse(this);
+        connection.sendResponse(this);                                              // 通过当前连接将 延迟响应(异步)的 rpc 的调用结果返回客户端
       } catch (Exception e) {
         // For synchronous calls, application code is done once it's returned
         // from a method. It does not expect to receive an error.
@@ -946,16 +946,16 @@ public abstract class Server {
         // Responder is not able to send out the response.
         LOG.error("Failed to send deferred response. ThreadName=" + Thread
             .currentThread().getName() + ", CallId="
-            + callId + ", hostname=" + getHostAddress());
+            + callId + ", hostname=" + getHostAddress());                           // 对于同步调用，应用程序代码是在方法返回时完成的，它不期望收到错误
       }
     }
 
     @Override
-    public void setDeferredResponse(Writable response) {
+    public void setDeferredResponse(Writable response) {                            // 如果调用成功，设置延迟响应
       if (this.connection.getServer().running) {
         try {
           setupResponse(this, RpcStatusProto.SUCCESS, null, response,
-              null, null);
+              null, null);                                                          // 延迟响应成功的 rpc 没有错误信息，只能通过调用层判断
         } catch (IOException e) {
           // For synchronous calls, application code is done once it has
           // returned from a method. It does not expect to receive an error.
@@ -971,7 +971,7 @@ public abstract class Server {
     }
 
     @Override
-    public void setDeferredError(Throwable t) {
+    public void setDeferredError(Throwable t) {                                     // 如果异步调用失败，设置错误响应
       if (this.connection.getServer().running) {
         if (t == null) {
           t = new IOException(
@@ -982,7 +982,7 @@ public abstract class Server {
           populateResponseParamsOnError(t, responseParams);
           setupResponse(this, responseParams.returnStatus,
               responseParams.detailedErr,
-              null, responseParams.errorClass, responseParams.error);
+              null, responseParams.errorClass, responseParams.error);               // 设置调用异常的 rpc 的错误信息
         } catch (IOException e) {
           // For synchronous calls, application code is done once it has
           // returned from a method. It does not expect to receive an error.
@@ -1014,51 +1014,51 @@ public abstract class Server {
   }
 
   /** Listens on the socket. Creates jobs for the handler threads*/
-  private class Listener extends Thread {
+  private class Listener extends Thread {                                           // socket 上的监听器，为 handler 线程创建任务，单线程运行
     
     private ServerSocketChannel acceptChannel = null; //the accept channel
-    private Selector selector = null; //the selector that we use for the server
+    private Selector selector = null; //the selector that we use for the server     // listen socket 上的 selector
     private Reader[] readers = null;
     private int currentReader = 0;
     private InetSocketAddress address; //the address we bind at
     private int backlogLength = conf.getInt(
         CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_KEY,
-        CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_DEFAULT);
+        CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_DEFAULT);        // 默认 listener 的 backlog 为 128
     
     public Listener() throws IOException {
       address = new InetSocketAddress(bindAddress, port);
       // Create a new server socket and set to non blocking mode
       acceptChannel = ServerSocketChannel.open();
-      acceptChannel.configureBlocking(false);
+      acceptChannel.configureBlocking(false);                                       // 创建 server socket，并设置为非阻塞
 
       // Bind the server socket to the local host and port
-      bind(acceptChannel.socket(), address, backlogLength, conf, portRangeConfig);
+      bind(acceptChannel.socket(), address, backlogLength, conf, portRangeConfig);  // 绑定 socket 到当前 RPC 的 address 上，如果端口是随机的，则获取
       port = acceptChannel.socket().getLocalPort(); //Could be an ephemeral port
       // create a selector;
       selector= Selector.open();
-      readers = new Reader[readThreads];
+      readers = new Reader[readThreads];                                            // 创建 rpc Reader，默认为 1 个
       for (int i = 0; i < readThreads; i++) {
         Reader reader = new Reader(
             "Socket Reader #" + (i + 1) + " for port " + port);
         readers[i] = reader;
-        reader.start();
+        reader.start();                                                             // rpc Reader 是一个线程，在创建 Listener 之后就起来了
       }
 
       // Register accepts on the server socket with the selector.
-      acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
+      acceptChannel.register(selector, SelectionKey.OP_ACCEPT);                     // 注册 acceptChannel 的 ACCEPT 事件到 selector 上
       this.setName("IPC Server listener on " + port);
       this.setDaemon(true);
     }
     
-    private class Reader extends Thread {
+    private class Reader extends Thread {                                           // rpc Reader 是一个线程，在创建 Listener 之后就起来了
       final private BlockingQueue<Connection> pendingConnections;
-      private final Selector readSelector;
+      private final Selector readSelector;                                          // 读数据的 channel
 
       Reader(String name) throws IOException {
         super(name);
 
         this.pendingConnections =
-            new LinkedBlockingQueue<Connection>(readerPendingConnectionQueue);
+            new LinkedBlockingQueue<Connection>(readerPendingConnectionQueue);      // 等待读线程处理的连接
         this.readSelector = Selector.open();
       }
       
@@ -1066,7 +1066,7 @@ public abstract class Server {
       public void run() {
         LOG.info("Starting " + Thread.currentThread().getName());
         try {
-          doRunLoop();
+          doRunLoop();                                                              // Reader 主要执行过程
         } finally {
           try {
             readSelector.close();
@@ -1082,19 +1082,19 @@ public abstract class Server {
           try {
             // consume as many connections as currently queued to avoid
             // unbridled acceptance of connections that starves the select
-            int size = pendingConnections.size();
+            int size = pendingConnections.size();                                   // 一次性消费尽可能多的连接，以避免 Reader 无法接受其他的连接
             for (int i=size; i>0; i--) {
               Connection conn = pendingConnections.take();
-              conn.channel.register(readSelector, SelectionKey.OP_READ, conn);
+              conn.channel.register(readSelector, SelectionKey.OP_READ, conn);      // 将 conn 中的 channel 的 READ 事件注册到 readSelector 上
             }
-            readSelector.select();
+            readSelector.select();                                                  // select 方法监控注册到 selector 上的事件，调用 wakeup 以返回
 
-            Iterator<SelectionKey> iter = readSelector.selectedKeys().iterator();
+            Iterator<SelectionKey> iter = readSelector.selectedKeys().iterator();   // selectedKeys 方法获取已经准备好的事件，开始遍历
             while (iter.hasNext()) {
               key = iter.next();
               iter.remove();
               try {
-                if (key.isReadable()) {
+                if (key.isReadable()) {                                             // 如果是读事件准备好了，则开始读取数据
                   doRead(key);
                 }
               } catch (CancelledKeyException cke) {
@@ -1124,14 +1124,14 @@ public abstract class Server {
        * so the connection must be queued.  The reader will drain the queue
        * and update its readSelector before performing the next select
        */
-      public void addConnection(Connection conn) throws InterruptedException {
-        pendingConnections.put(conn);
-        readSelector.wakeup();
+      public void addConnection(Connection conn) throws InterruptedException {      // 新增连接到 Reader 连接池中
+        pendingConnections.put(conn);                                               // 在使用readSelector时更新它不是线程安全的，所以连接必须排队
+        readSelector.wakeup();                                                      // 尚未返回的 select 操作立即返回
       }
 
       void shutdown() {
         assert !running;
-        readSelector.wakeup();
+        readSelector.wakeup();                                                      // shutdown 读线程时尽量保证数据被处理完
         try {
           super.interrupt();
           super.join();
@@ -1145,18 +1145,18 @@ public abstract class Server {
     public void run() {
       LOG.info(Thread.currentThread().getName() + ": starting");
       SERVER.set(Server.this);
-      connectionManager.startIdleScan();
+      connectionManager.startIdleScan();                                            // 启动 connectionManager 后台扫描线程
       while (running) {
         SelectionKey key = null;
         try {
           getSelector().select();
-          Iterator<SelectionKey> iter = getSelector().selectedKeys().iterator();
+          Iterator<SelectionKey> iter = getSelector().selectedKeys().iterator();    // 获取所有准备好的事件，开始遍历
           while (iter.hasNext()) {
             key = iter.next();
             iter.remove();
             try {
               if (key.isValid()) {
-                if (key.isAcceptable())
+                if (key.isAcceptable())                                             // 如果 tcp 连接准备好了，则开始处理连接
                   doAccept(key);
               }
             } catch (IOException e) {
@@ -1168,8 +1168,8 @@ public abstract class Server {
           // log the event and sleep for a minute and give 
           // some thread(s) a chance to finish
           LOG.warn("Out of Memory in server select", e);
-          closeCurrentConnection(key, e);
-          connectionManager.closeIdle(true);
+          closeCurrentConnection(key, e);                                           // 如果由于线程太多导致 OOM，则关闭当前连接，休息一会 60s，继续工作
+          connectionManager.closeIdle(true);                                        // 发生 OOM 时，关闭所有空闲时间过长的连接
           try { Thread.sleep(60000); } catch (Exception ie) {}
         } catch (Exception e) {
           closeCurrentConnection(key, e);
@@ -1179,7 +1179,7 @@ public abstract class Server {
 
       synchronized (this) {
         try {
-          acceptChannel.close();
+          acceptChannel.close();                                                    // 关闭 channel、关闭 selector，关闭 listener
           selector.close();
         } catch (IOException e) { }
 
@@ -1187,12 +1187,12 @@ public abstract class Server {
         acceptChannel= null;
         
         // close all connections
-        connectionManager.stopIdleScan();
+        connectionManager.stopIdleScan();                                           // 通知 connectionManager 关闭所有的连接
         connectionManager.closeAll();
       }
     }
 
-    private void closeCurrentConnection(SelectionKey key, Throwable e) {
+    private void closeCurrentConnection(SelectionKey key, Throwable e) {            // 关闭当前连接，关闭时需要用到添加到 SelectionKey 中的附件
       if (key != null) {
         Connection c = (Connection)key.attachment();
         if (c != null) {
@@ -1206,40 +1206,40 @@ public abstract class Server {
       return (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
     }
     
-    void doAccept(SelectionKey key) throws InterruptedException, IOException,  OutOfMemoryError {
+    void doAccept(SelectionKey key) throws InterruptedException, IOException,  OutOfMemoryError {   // 开始处理 tcp 连接
       ServerSocketChannel server = (ServerSocketChannel) key.channel();
       SocketChannel channel;
-      while ((channel = server.accept()) != null) {
+      while ((channel = server.accept()) != null) {                                 // 一个 ServerSocketChannel 上会有多个连接排队等待
 
         channel.configureBlocking(false);
         channel.socket().setTcpNoDelay(tcpNoDelay);
-        channel.socket().setKeepAlive(true);
+        channel.socket().setKeepAlive(true);                                        // 初始化连接设置，非阻塞、nagle 算法、keepAlive
         
         Reader reader = getReader();
-        Connection c = connectionManager.register(channel);
+        Connection c = connectionManager.register(channel);                         // 将建立好的 tcp 连接 channel 交给 connectionManager 管理
         // If the connectionManager can't take it, close the connection.
         if (c == null) {
           if (channel.isOpen()) {
             IOUtils.cleanup(null, channel);
           }
-          connectionManager.droppedConnections.getAndIncrement();
+          connectionManager.droppedConnections.getAndIncrement();                   // 连接数达到最大值，不再添加连接
           continue;
         }
         key.attach(c);  // so closeCurrentConnection can get the object
-        reader.addConnection(c);
+        reader.addConnection(c);                                                    // 在读线程中加入刚创建好的连接，以便读取数据
       }
     }
 
-    void doRead(SelectionKey key) throws InterruptedException {
+    void doRead(SelectionKey key) throws InterruptedException {                     // 从 SelectionKey 读取数据
       int count;
-      Connection c = (Connection)key.attachment();
+      Connection c = (Connection)key.attachment();                                  // attachment 是像 readSelector 注册时附带的
       if (c == null) {
         return;  
       }
       c.setLastContact(Time.now());
       
       try {
-        count = c.readAndProcess();
+        count = c.readAndProcess();                                                 // 读数据并处理，调用 Connection 方法，但是在 Reader 线程中处理
       } catch (InterruptedException ieo) {
         LOG.info(Thread.currentThread().getName() + ": readAndProcess caught InterruptedException", ieo);
         throw ieo;
@@ -1253,7 +1253,7 @@ public abstract class Server {
       }
       // setupResponse will signal the connection should be closed when a
       // fatal response is sent.
-      if (count < 0 || c.shouldClose()) {
+      if (count < 0 || c.shouldClose()) {                                           // 如果读取数据有误则根据连接异常信息，选择是否关闭连接
         closeConnection(c);
         c = null;
       }
@@ -1262,7 +1262,7 @@ public abstract class Server {
       }
     }   
 
-    synchronized void doStop() {
+    synchronized void doStop() {                                                    // 当前 server 停止时，关闭 selector、acceptChannel
       if (selector != null) {
         selector.wakeup();
         Thread.yield();
@@ -1274,7 +1274,7 @@ public abstract class Server {
           LOG.info(Thread.currentThread().getName() + ":Exception in closing listener socket. " + e);
         }
       }
-      for (Reader r : readers) {
+      for (Reader r : readers) {                                                    // 关闭所有的 Reader 线程
         r.shutdown();
       }
     }
@@ -1283,14 +1283,14 @@ public abstract class Server {
     // The method that will return the next reader to work with
     // Simplistic implementation of round robin for now
     Reader getReader() {
-      currentReader = (currentReader + 1) % readers.length;
+      currentReader = (currentReader + 1) % readers.length;                         // 返回下一个可用的 Reader
       return readers[currentReader];
     }
   }
 
   // Sends responses of RPC back to clients.
-  private class Responder extends Thread {
-    private final Selector writeSelector;
+  private class Responder extends Thread {                                          // 回复响应到客户端，单线程
+    private final Selector writeSelector;                                           // 用于处理写请求的 Selector
     private int pending;         // connections waiting to register
     
     final static int PURGE_INTERVAL = 900000; // 15mins
@@ -1307,7 +1307,7 @@ public abstract class Server {
       LOG.info(Thread.currentThread().getName() + ": starting");
       SERVER.set(Server.this);
       try {
-        doRunLoop();
+        doRunLoop();                                                                // Responder 线程主要运行方法
       } finally {
         LOG.info("Stopping " + Thread.currentThread().getName());
         try {
@@ -1323,14 +1323,14 @@ public abstract class Server {
 
       while (running) {
         try {
-          waitPending();     // If a channel is being registered, wait.
-          writeSelector.select(PURGE_INTERVAL);
-          Iterator<SelectionKey> iter = writeSelector.selectedKeys().iterator();
+          waitPending();     // If a channel is being registered, wait.             // 如果有 channel 正在向 writeSelector 注册，则等待
+          writeSelector.select(PURGE_INTERVAL);                                     // Selector 最多等待 15min
+          Iterator<SelectionKey> iter = writeSelector.selectedKeys().iterator();    // 获取所有准备好的 SelectionKey 事件
           while (iter.hasNext()) {
             SelectionKey key = iter.next();
             iter.remove();
             try {
-              if (key.isWritable()) {
+              if (key.isWritable()) {                                               // 写操作准备好了，还是执行异步写数据
                 doAsyncWrite(key);
               }
             } catch (CancelledKeyException cke) {
@@ -1347,7 +1347,7 @@ public abstract class Server {
             }
           }
           long now = Time.now();
-          if (now < lastPurgeTime + PURGE_INTERVAL) {
+          if (now < lastPurgeTime + PURGE_INTERVAL) {                               // 如果是由于事件导致 select 返回，则继续 select
             continue;
           }
           lastPurgeTime = now;
@@ -1361,7 +1361,7 @@ public abstract class Server {
           ArrayList<RpcCall> calls;
           
           // get the list of channels from list of keys.
-          synchronized (writeSelector.keys()) {
+          synchronized (writeSelector.keys()) {                                     // 如果有一些长时间没有处理的调用，丢弃它们
             calls = new ArrayList<RpcCall>(writeSelector.keys().size());
             iter = writeSelector.keys().iterator();
             while (iter.hasNext()) {
@@ -1373,7 +1373,7 @@ public abstract class Server {
             }
           }
 
-          for (RpcCall call : calls) {
+          for (RpcCall call : calls) {                                              // 清理 select 上等待超时的 rpc 调用
             doPurge(call, now);
           }
         } catch (OutOfMemoryError e) {
@@ -1383,14 +1383,14 @@ public abstract class Server {
           // some thread(s) a chance to finish
           //
           LOG.warn("Out of Memory in server select", e);
-          try { Thread.sleep(60000); } catch (Exception ie) {}
+          try { Thread.sleep(60000); } catch (Exception ie) {}                      // 如果由于线程太多导致 OOM，则休息一会 60s，继续工作
         } catch (Exception e) {
           LOG.warn("Exception in Responder", e);
         }
       }
     }
 
-    private void doAsyncWrite(SelectionKey key) throws IOException {
+    private void doAsyncWrite(SelectionKey key) throws IOException {                // 执行异步写数据操作，这里是 Responder 线程做的
       RpcCall call = (RpcCall)key.attachment();
       if (call == null) {
         return;
@@ -1400,7 +1400,7 @@ public abstract class Server {
       }
 
       synchronized(call.connection.responseQueue) {
-        if (processResponse(call.connection.responseQueue, false)) {
+        if (processResponse(call.connection.responseQueue, false)) {                // 开始处理 call 对应的 connection 上所有等待发送的响应
           try {
             key.interestOps(0);
           } catch (CancelledKeyException e) {
@@ -1419,13 +1419,13 @@ public abstract class Server {
     // Remove calls that have been pending in the responseQueue 
     // for a long time.
     //
-    private void doPurge(RpcCall call, long now) {
-      LinkedList<RpcCall> responseQueue = call.connection.responseQueue;
+    private void doPurge(RpcCall call, long now) {                                  // 移除在 responseQueue 中存放过久的调用 RpcCall
+      LinkedList<RpcCall> responseQueue = call.connection.responseQueue;            // 获取 RpcCall 对应的 Connection 上所有等待发送响应的 RpcCall
       synchronized (responseQueue) {
         Iterator<RpcCall> iter = responseQueue.listIterator(0);
         while (iter.hasNext()) {
           call = iter.next();
-          if (now > call.timestamp + PURGE_INTERVAL) {
+          if (now > call.timestamp + PURGE_INTERVAL) {                              // 如果发送响应时间超时(15min)，则关闭 call 所在的连接
             closeConnection(call.connection);
             break;
           }
@@ -1437,8 +1437,8 @@ public abstract class Server {
     // data for this channel.
     //
     private boolean processResponse(LinkedList<RpcCall> responseQueue,
-                                    boolean inHandler) throws IOException {
-      boolean error = true;
+                                    boolean inHandler) throws IOException {         // 处理 responseQueue 中的一个等待发送响应的 call
+      boolean error = true;                                                         // inHandler 表示该方法是否由 handler 线程调用
       boolean done = false;       // there is more data for this channel.
       int numElements = 0;
       RpcCall call = null;
@@ -1456,21 +1456,21 @@ public abstract class Server {
           // Extract the first call
           //
           call = responseQueue.removeFirst();
-          SocketChannel channel = call.connection.channel;
+          SocketChannel channel = call.connection.channel;                          // 响应数据的方法，依然使用 connection 的 channel
           if (LOG.isDebugEnabled()) {
             LOG.debug(Thread.currentThread().getName() + ": responding to " + call);
           }
           //
           // Send as much data as we can in the non-blocking fashion
           //
-          int numBytes = channelWrite(channel, call.rpcResponse);
+          int numBytes = channelWrite(channel, call.rpcResponse);                   // 将 call 中的响应数据写入 channel 中
           if (numBytes < 0) {
             return true;
           }
           if (!call.rpcResponse.hasRemaining()) {
             //Clear out the response buffer so it can be collected
             call.rpcResponse = null;
-            call.connection.decRpcCount();
+            call.connection.decRpcCount();                                          // 数据写到 channel 完成，表明这一次 rpc 请求处理完毕
             if (numElements == 1) {    // last call fully processes.
               done = true;             // no more data for this channel.
             } else {
@@ -1485,18 +1485,18 @@ public abstract class Server {
             // If we were unable to write the entire response out, then 
             // insert in Selector queue. 
             //
-            call.connection.responseQueue.addFirst(call);
+            call.connection.responseQueue.addFirst(call);                           // 如果响应数据还没有完全写完，则继续在下一次循环中写数据
             
-            if (inHandler) {
+            if (inHandler) {                                                        // 如果是 handler 线程调用，则唤醒 selector，注册写事件
               // set the serve time when the response has to be sent later
               call.timestamp = Time.now();
               
-              incPending();
+              incPending();                                                         // Handler 线程注册 channel 时，先 block Responder 线程
               try {
                 // Wakeup the thread blocked on select, only then can the call 
                 // to channel.register() complete.
-                writeSelector.wakeup();
-                channel.register(writeSelector, SelectionKey.OP_WRITE, call);
+                writeSelector.wakeup();                                             // Handler 线程调用没有写完数据，剩下的交给 Responder 线程去做
+                channel.register(writeSelector, SelectionKey.OP_WRITE, call);       // 唤醒 writeSelector 后，就可以将 channel 注册到 selector 上
               } catch (ClosedChannelException e) {
                 //Its ok. channel might be closed else where.
                 done = true;
@@ -1515,7 +1515,7 @@ public abstract class Server {
         if (error && call != null) {
           LOG.warn(Thread.currentThread().getName()+", call " + call + ": output error");
           done = true;               // error. no more data for this channel.
-          closeConnection(call.connection);
+          closeConnection(call.connection);                                         // 如果回复响应的过程有异常，则关闭 call 所在的连接
         }
       }
       return done;
@@ -1524,16 +1524,16 @@ public abstract class Server {
     //
     // Enqueue a response from the application.
     //
-    void doRespond(RpcCall call) throws IOException {
+    void doRespond(RpcCall call) throws IOException {                               // 一般会由 handler 线程添加处理完成的 call 到这里
       synchronized (call.connection.responseQueue) {
         // must only wrap before adding to the responseQueue to prevent
         // postponed responses from being encrypted and sent out of order.
-        if (call.connection.useWrap) {
+        if (call.connection.useWrap) {                                              // 如果有必要，包装响应数据
           wrapWithSasl(call);
         }
-        call.connection.responseQueue.addLast(call);
+        call.connection.responseQueue.addLast(call);                                // 正常完成的 rpc 响应会被添加到待处理响应队列的末尾
         if (call.connection.responseQueue.size() == 1) {
-          processResponse(call.connection.responseQueue, true);
+          processResponse(call.connection.responseQueue, true);                     // 如果 connection 上只有一个待处理的响应，则先立即处理它
         }
       }
     }
@@ -1547,7 +1547,7 @@ public abstract class Server {
       notify();
     }
 
-    private synchronized void waitPending() throws InterruptedException {
+    private synchronized void waitPending() throws InterruptedException {           // 只要 pending 大于 0 就一直等待
       while (pending > 0) {
         wait();
       }
@@ -1555,7 +1555,7 @@ public abstract class Server {
   }
 
   @InterfaceAudience.Private
-  public enum AuthProtocol {
+  public enum AuthProtocol {                                                        // 验证协议，其中包含由客户端传过来的 callId
     NONE(0),
     SASL(-33);
     
@@ -1581,7 +1581,7 @@ public abstract class Server {
    * unnecessary stack trace logging if it's not an internal server error. 
    */
   @SuppressWarnings("serial")
-  private static class FatalRpcServerException extends RpcServerException {
+  private static class FatalRpcServerException extends RpcServerException {         // 将 RPC IOException 的封装器返回给客户端
     private final RpcErrorCodeProto errCode;
     public FatalRpcServerException(RpcErrorCodeProto errCode, IOException ioe) {
       super(ioe.toString(), ioe);
@@ -1605,30 +1605,30 @@ public abstract class Server {
   }
 
   /** Reads calls from a connection and queues them for handling. */
-  public class Connection {
-    private boolean connectionHeaderRead = false; // connection  header is read?
-    private boolean connectionContextRead = false; //if connection context that
+  public class Connection {                                                         // 表示一个 rpc 连接，一个 socket 连接
+    private boolean connectionHeaderRead = false; // connection  header is read?    // 请求连接头是否已经读取
+    private boolean connectionContextRead = false; //if connection context that     // 紧随连接头之后的连接上下文是否已经读取
                                             //follows connection header is read
 
-    private SocketChannel channel;
+    private SocketChannel channel;                                                  // 与 socket 连接绑定的 channel
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
-    private LinkedList<RpcCall> responseQueue;
+    private LinkedList<RpcCall> responseQueue;                                      // 已经调用完成 等待返回数据的 RpcCall 队列
     // number of outstanding rpcs
-    private AtomicInteger rpcCount = new AtomicInteger();
-    private long lastContact;
+    private AtomicInteger rpcCount = new AtomicInteger();                           // 该 Connection 上正在处理的 rpc 数量
+    private long lastContact;                                                       // 最近一次处理该连接的时间
     private int dataLength;
     private Socket socket;
     // Cache the remote host & port info so that even if the socket is 
     // disconnected, we can say where it used to connect to.
-    private String hostAddress;
+    private String hostAddress;                                                     // 当前连接的远程 address
     private int remotePort;
     private InetAddress addr;
     
-    IpcConnectionContextProto connectionContext;
+    IpcConnectionContextProto connectionContext;                                    // 当前 rpc 连接的上下文，一般在首次 rpc 调用时建立
     String protocolName;
     SaslServer saslServer;
-    private AuthMethod authMethod;
+    private AuthMethod authMethod;                                                  // 当前 rpc 连接的认证方式、认证协议
     private AuthProtocol authProtocol;
     private boolean saslContextEstablished;
     private ByteBuffer connectionHeaderBuf = null;
@@ -1637,7 +1637,7 @@ public abstract class Server {
     private int serviceClass;
     private boolean shouldClose = false;
 
-    UserGroupInformation user = null;
+    UserGroupInformation user = null;                                               // 当前 rpc 连接的远程调用用户
     public UserGroupInformation attemptingUser = null; // user name before auth
 
     // Fake 'call' for failed authorization response
@@ -1654,7 +1654,7 @@ public abstract class Server {
       
       // the buffer is initialized to read the "hrpc" and after that to read
       // the length of the Rpc-packet (i.e 4 bytes)
-      this.dataLengthBuffer = ByteBuffer.allocate(4);
+      this.dataLengthBuffer = ByteBuffer.allocate(4);                               // dataLengthBuffer 可用户存放数据长度、RPC 请求头: hrpc
       this.unwrappedData = null;
       this.unwrappedDataLengthBuffer = ByteBuffer.allocate(4);
       this.socket = channel.socket();
@@ -1668,7 +1668,7 @@ public abstract class Server {
       this.responseQueue = new LinkedList<RpcCall>();
       if (socketSendBufferSize != 0) {
         try {
-          socket.setSendBufferSize(socketSendBufferSize);
+          socket.setSendBufferSize(socketSendBufferSize);                           // 设置 socket 缓存，默认 10KB
         } catch (IOException e) {
           LOG.warn("Connection: unable to set socket send buffer size to " +
                    socketSendBufferSize);
@@ -1710,7 +1710,7 @@ public abstract class Server {
     }
 
     /* Return true if the connection has no outstanding rpc */
-    private boolean isIdle() {
+    private boolean isIdle() {                                                      // 如果当前连接没有正在处理的 rpc，则返回 true
       return rpcCount.get() == 0;
     }
     
@@ -1725,7 +1725,7 @@ public abstract class Server {
     }
     
     private UserGroupInformation getAuthorizedUgi(String authorizedId)
-        throws InvalidToken, AccessControlException {
+        throws InvalidToken, AccessControlException {                               // 获取授权用户的 token
       if (authMethod == AuthMethod.TOKEN) {
         TokenIdentifier tokenId = SaslRpcServer.getIdentifier(authorizedId,
             secretManager);
@@ -1744,7 +1744,7 @@ public abstract class Server {
     private void saslReadAndProcess(RpcWritable.Buffer buffer) throws
         RpcServerException, IOException, InterruptedException {
       final RpcSaslProto saslMessage =
-          getMessage(RpcSaslProto.getDefaultInstance(), buffer);
+          getMessage(RpcSaslProto.getDefaultInstance(), buffer);                    // 从 buffer 中构造 sasl 格式的消息
       switch (saslMessage.getState()) {
         case WRAP: {
           if (!saslContextEstablished || !useWrap) {
@@ -1753,11 +1753,11 @@ public abstract class Server {
                 new SaslException("Server is not wrapping data"));
           }
           // loops over decoded data and calls processOneRpc
-          unwrapPacketAndProcessRpcs(saslMessage.getToken().toByteArray());
+          unwrapPacketAndProcessRpcs(saslMessage.getToken().toByteArray());         // 解包请求数据并处理 rpc 请求
           break;
         }
         default:
-          saslProcess(saslMessage);
+          saslProcess(saslMessage);                                                 // 如果数据没有被包装，开始处理 sasl 连接过程
       }
     }
 
@@ -1770,7 +1770,7 @@ public abstract class Server {
      * @param e the exception that may have a cause we want to unwrap.
      * @return the true cause for some exceptions.
      */
-    private Throwable getTrueCause(IOException e) {
+    private Throwable getTrueCause(IOException e) {                                 // 获取异常 e 的真正异常，用于返回客户端
       Throwable cause = e;
       while (cause != null) {
         if (cause instanceof RetriableException) {
@@ -1806,7 +1806,7 @@ public abstract class Server {
      * @throws InterruptedException
      */
     private void saslProcess(RpcSaslProto saslMessage)
-        throws RpcServerException, IOException, InterruptedException {
+        throws RpcServerException, IOException, InterruptedException {              // 处理 sasl 消息并返回响应
       if (saslContextEstablished) {
         throw new FatalRpcServerException(
             RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
@@ -1815,14 +1815,14 @@ public abstract class Server {
       RpcSaslProto saslResponse = null;
       try {
         try {
-          saslResponse = processSaslMessage(saslMessage);
+          saslResponse = processSaslMessage(saslMessage);                           // 处理 saslMessage，获取响应后准备返回
         } catch (IOException e) {
           rpcMetrics.incrAuthenticationFailures();
           if (LOG.isDebugEnabled()) {
             LOG.debug(StringUtils.stringifyException(e));
           }
           // attempting user could be null
-          IOException tce = (IOException) getTrueCause(e);
+          IOException tce = (IOException) getTrueCause(e);                          // IOException 可能是被包装的，这里获取真正的异常原因
           AUDITLOG.warn(AUTH_FAILED_FOR + this.toString() + ":"
               + attemptingUser + " (" + e.getLocalizedMessage()
               + ") with true cause: (" + tce.getLocalizedMessage() + ")");
@@ -1834,7 +1834,7 @@ public abstract class Server {
             LOG.debug("SASL server context established. Negotiated QoP is "
                 + saslServer.getNegotiatedProperty(Sasl.QOP));
           }
-          user = getAuthorizedUgi(saslServer.getAuthorizationID());
+          user = getAuthorizedUgi(saslServer.getAuthorizationID());                 // 从 secretManager 中获取通过授权的用户
           if (LOG.isDebugEnabled()) {
             LOG.debug("SASL server successfully authenticated client: " + user);
           }
@@ -1850,7 +1850,7 @@ public abstract class Server {
       }
       // send back response if any, may throw IOException
       if (saslResponse != null) {
-        doSaslReply(saslResponse);
+        doSaslReply(saslResponse);                                                  // 返回 sasl 响应到客户端
       }
       // do NOT enable wrapping until the last auth response is sent
       if (saslContextEstablished) {
@@ -1879,7 +1879,7 @@ public abstract class Server {
         throws SaslException, IOException, AccessControlException,
         InterruptedException {
       final RpcSaslProto saslResponse;
-      final SaslState state = saslMessage.getState(); // required      
+      final SaslState state = saslMessage.getState(); // required                   // 获取请求的 sasl 消息状态，根据状态信息建立安全连接
       switch (state) {
         case NEGOTIATE: {
           if (sentNegotiate) {
@@ -1895,7 +1895,7 @@ public abstract class Server {
           }
           break;
         }
-        case INITIATE: {
+        case INITIATE: {                                                            // INITIATE 表明客户端已经准备好建立安全连接，但服务端可能继续协商
           if (saslMessage.getAuthsCount() != 1) {
             throw new SaslException("Client mechanism is malformed");
           }
@@ -1907,7 +1907,7 @@ public abstract class Server {
                   clientSaslAuth.getMethod() + " authentication is not enabled."
                       + "  Available:" + enabledAuthMethods);
             }
-            saslResponse = buildSaslNegotiateResponse();
+            saslResponse = buildSaslNegotiateResponse();                            // 可能需要经过多次协商，这里继续构造协商响应
             break;
           }
           authMethod = AuthMethod.valueOf(clientSaslAuth.getMethod());
@@ -1922,7 +1922,7 @@ public abstract class Server {
           if (saslServer == null || authMethod != AuthMethod.TOKEN) {
             saslServer = createSaslServer(authMethod);
           }
-          saslResponse = processSaslToken(saslMessage);
+          saslResponse = processSaslToken(saslMessage);                             // 处理 sasl token
           break;
         }
         case RESPONSE: {
@@ -1936,7 +1936,7 @@ public abstract class Server {
     }
 
     private RpcSaslProto processSaslToken(RpcSaslProto saslMessage)
-        throws SaslException {
+        throws SaslException {                                                      // 处理 sasl 消息中的 token
       if (!saslMessage.hasToken()) {
         throw new SaslException("Client did not send a token");
       }
@@ -1945,13 +1945,13 @@ public abstract class Server {
         LOG.debug("Have read input token of size " + saslToken.length
             + " for processing by saslServer.evaluateResponse()");
       }
-      saslToken = saslServer.evaluateResponse(saslToken);
+      saslToken = saslServer.evaluateResponse(saslToken);                           // 由 sasl 服务计算 token
       return buildSaslResponse(
           saslServer.isComplete() ? SaslState.SUCCESS : SaslState.CHALLENGE,
           saslToken);
     }
 
-    private void switchToSimple() {
+    private void switchToSimple() {                                                 // 如果有必要，则将连接降级为非安全
       // disable SASL and blank out any SASL server
       authProtocol = AuthProtocol.NONE;
       disposeSasl();
@@ -1971,7 +1971,7 @@ public abstract class Server {
       return response.build();
     }
 
-    private void doSaslReply(Message message) throws IOException {
+    private void doSaslReply(Message message) throws IOException {                  // 构造 saslCall，设置返回消息并返回客户端
       final RpcCall saslCall = new RpcCall(this, AuthProtocol.SASL.callId);
       setupResponse(saslCall,
           RpcStatusProto.SUCCESS, null,
@@ -1979,14 +1979,14 @@ public abstract class Server {
       sendResponse(saslCall);
     }
 
-    private void doSaslReply(Exception ioe) throws IOException {
+    private void doSaslReply(Exception ioe) throws IOException {                    // 构造异常 saslCall 响应，返回客户端
       setupResponse(authFailedCall,
           RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_UNAUTHORIZED,
           null, ioe.getClass().getName(), ioe.getLocalizedMessage());
       sendResponse(authFailedCall);
     }
 
-    private void disposeSasl() {
+    private void disposeSasl() {                                                    // 关闭 saslServer 服务
       if (saslServer != null) {
         try {
           saslServer.dispose();
@@ -2003,7 +2003,7 @@ public abstract class Server {
                        "!! from " + getHostAddress();
         LOG.warn(error);
         throw new IOException(error);
-      } else if (dataLength > maxDataLength) {
+      } else if (dataLength > maxDataLength) {                                      // 如果请求数据大于最大限制(默认 64M)，抛出 IOException
         String error = "Requested data length " + dataLength +
               " is longer than maximum configured RPC length " + 
             maxDataLength + ".  RPC came from " + getHostAddress();
@@ -2013,13 +2013,13 @@ public abstract class Server {
     }
 
     /**
-     * This method reads in a non-blocking fashion from the channel: 
-     * this method is called repeatedly when data is present in the channel; 
-     * when it has enough data to process one rpc it processes that rpc.
+     * This method reads in a non-blocking fashion from the channel:                // 该方法从通道中非阻塞方式的读取数据
+     * this method is called repeatedly when data is present in the channel;        // 当通道中存在数据时，会重复调用此方法
+     * when it has enough data to process one rpc it processes that rpc.            // 当它有足够的数据来处理一个rpc时，它会处理该rpc
      * 
      * On the first pass, it processes the connectionHeader, 
      * connectionContext (an outOfBand RPC) and at most one RPC request that 
-     * follows that. On future passes it will process at most one RPC request.
+     * follows that. On future passes it will process at most one RPC request.      // 在第一个 rpc 处理过程中，处理连接头、连接上下文
      *  
      * Quirky things: dataLengthBuffer (4 bytes) is used to read "hrpc" OR 
      * rpc request length.
@@ -2029,17 +2029,17 @@ public abstract class Server {
      *         client, typically failure to respond to client
      * @throws InterruptedException
      */
-    public int readAndProcess() throws IOException, InterruptedException {
-      while (!shouldClose()) { // stop if a fatal response has been sent.
+    public int readAndProcess() throws IOException, InterruptedException {          // 读取数据并准备处理 rpc，由 Reader 线程调用
+      while (!shouldClose()) { // stop if a fatal response has been sent.           // 如果需要停止该连接，则不再处理请求
         // dataLengthBuffer is used to read "hrpc" or the rpc-packet length
         int count = -1;
         if (dataLengthBuffer.remaining() > 0) {
-          count = channelRead(channel, dataLengthBuffer);       
+          count = channelRead(channel, dataLengthBuffer);                           // 获取数据长度，4个字节，可以用于存放 rpc 请求头 hrpc
           if (count < 0 || dataLengthBuffer.remaining() > 0) 
             return count;
         }
         
-        if (!connectionHeaderRead) {
+        if (!connectionHeaderRead) {                                                // 首先读取 RPC 连接请求头
           // Every connection is expected to send the header;
           // so far we read "hrpc" of the connection header.
           if (connectionHeaderBuf == null) {
@@ -2047,10 +2047,10 @@ public abstract class Server {
             connectionHeaderBuf = ByteBuffer.allocate(HEADER_LEN_AFTER_HRPC_PART);
           }
           count = channelRead(channel, connectionHeaderBuf);
-          if (count < 0 || connectionHeaderBuf.remaining() > 0) {
+          if (count < 0 || connectionHeaderBuf.remaining() > 0) {                   // 如果没有读满，获取读取数据失败，则返回读取数据失败
             return count;
           }
-          int version = connectionHeaderBuf.get(0);
+          int version = connectionHeaderBuf.get(0);                                 // 从数据中获取请求版本、服务类信息
           // TODO we should add handler for service class later
           this.setServiceClass(connectionHeaderBuf.get(1));
           dataLengthBuffer.flip();
@@ -2058,48 +2058,48 @@ public abstract class Server {
           // Check if it looks like the user is hitting an IPC port
           // with an HTTP GET - this is a common error, so we can
           // send back a simple string indicating as much.
-          if (HTTP_GET_BYTES.equals(dataLengthBuffer)) {
+          if (HTTP_GET_BYTES.equals(dataLengthBuffer)) {                            // 检查请求是否是用户正在用一个HTTP GET来访问IPC端口
             setupHttpRequestOnIpcPortResponse();
             return -1;
           }
           
           if (!RpcConstants.HEADER.equals(dataLengthBuffer)
-              || version != CURRENT_VERSION) {
+              || version != CURRENT_VERSION) {                                      // 检查 rpc 请求头信息、版本信息
             //Warning is ok since this is not supposed to happen.
             LOG.warn("Incorrect header or version mismatch from " + 
                      hostAddress + ":" + remotePort +
                      " got version " + version + 
                      " expected version " + CURRENT_VERSION);
-            setupBadVersionResponse(version);
+            setupBadVersionResponse(version);                                       // 信息不符合，返回客户端版本错误的响应
             return -1;
           }
           
           // this may switch us into SIMPLE
-          authProtocol = initializeAuthContext(connectionHeaderBuf.get(2));          
+          authProtocol = initializeAuthContext(connectionHeaderBuf.get(2));         // 从数据中获取请求安全认证信息
           
-          dataLengthBuffer.clear(); // clear to next read rpc packet len
+          dataLengthBuffer.clear(); // clear to next read rpc packet len            // 清理 dataLengthBuffer，以读取 rpc 数据长度
           connectionHeaderBuf = null;
           connectionHeaderRead = true;
-          continue; // connection header read, now read  4 bytes rpc packet len
+          continue; // connection header read, now read  4 bytes rpc packet len     // 连接头已经读取，现在开始读取 rpc 数据长度
         }
         
         if (data == null) { // just read 4 bytes -  length of RPC packet
-          dataLengthBuffer.flip();
-          dataLength = dataLengthBuffer.getInt();
+          dataLengthBuffer.flip();                                                  // 如果调用到了这里，表明 dataLengthBuffer 中存放的就是数据长度
+          dataLength = dataLengthBuffer.getInt();                                   // 获取要读取的 rpc 数据的长度，allocate 缓存准备接收数据
           checkDataLength(dataLength);
           // Set buffer for reading EXACTLY the RPC-packet length and no more.
           data = ByteBuffer.allocate(dataLength);
         }
         // Now read the RPC packet
-        count = channelRead(channel, data);
+        count = channelRead(channel, data);                                         // 开始读取 RPC 数据到 data 数组中
         
         if (data.remaining() == 0) {
-          dataLengthBuffer.clear(); // to read length of future rpc packets
+          dataLengthBuffer.clear(); // to read length of future rpc packets         // 清理 dataLengthBuffer 准备处理下一次 RPC
           data.flip();
           ByteBuffer requestData = data;
           data = null; // null out in case processOneRpc throws.
           boolean isHeaderRead = connectionContextRead;
-          processOneRpc(requestData);
+          processOneRpc(requestData);                                               // 开始处理一个 rpc 请求
           // the last rpc-request we processed could have simply been the
           // connectionContext; if so continue to read the first RPC.
           if (!isHeaderRead) {
@@ -2112,7 +2112,7 @@ public abstract class Server {
     }
 
     private AuthProtocol initializeAuthContext(int authType)
-        throws IOException {
+        throws IOException {                                                        // 获取安全认证类型
       AuthProtocol authProtocol = AuthProtocol.valueOf(authType);
       if (authProtocol == null) {
         IOException ioe = new IpcException("Unknown auth protocol:" + authType);
@@ -2123,7 +2123,7 @@ public abstract class Server {
       switch (authProtocol) {
         case NONE: {
           // don't reply if client is simple and server is insecure
-          if (!isSimpleEnabled) {
+          if (!isSimpleEnabled) {                                                   // 如果不允许非安全请求，响应异常信息到客户端
             IOException ioe = new AccessControlException(
                 "SIMPLE authentication is not enabled."
                     + "  Available:" + enabledAuthMethods);
@@ -2148,7 +2148,7 @@ public abstract class Server {
      * @throws IOException - if it fails to create the SASL server for Tokens
      */
     private RpcSaslProto buildSaslNegotiateResponse()
-        throws InterruptedException, SaslException, IOException {
+        throws InterruptedException, SaslException, IOException {                   // 构造 Sasl 协商响应，处理Sasl的协商请求，包括加速令牌协商的优化
       RpcSaslProto negotiateMessage = negotiateResponse;
       // accelerate token negotiation by sending initial challenge
       // in the negotiation response
@@ -2166,7 +2166,7 @@ public abstract class Server {
     }
     
     private SaslServer createSaslServer(AuthMethod authMethod)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException {                                  // 创建 SASL 服务，以建立安全 rpc 连接
       final Map<String,?> saslProps =
                   saslPropsResolver.getServerProperties(addr);
       return new SaslRpcServer(authMethod).create(this, saslProps, secretManager);
@@ -2180,7 +2180,7 @@ public abstract class Server {
      * @param clientVersion the version the caller is using 
      * @throws IOException
      */
-    private void setupBadVersionResponse(int clientVersion) throws IOException {
+    private void setupBadVersionResponse(int clientVersion) throws IOException {    // 尝试设置响应，以指示客户端版本与服务器不兼容
       String errMsg = "Server IPC version " + CURRENT_VERSION +
       " cannot communicate with client version " + clientVersion;
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -2211,7 +2211,7 @@ public abstract class Server {
       }
     }
     
-    private void setupHttpRequestOnIpcPortResponse() throws IOException {
+    private void setupHttpRequestOnIpcPortResponse() throws IOException {           // 如果使用 HTTP GET 访问 RPC 端口，返回提示信息
       RpcCall fakeCall = new RpcCall(this, 0);
       fakeCall.setResponse(ByteBuffer.wrap(
           RECEIVED_HTTP_REQ_RESPONSE.getBytes(StandardCharsets.UTF_8)));
@@ -2223,18 +2223,18 @@ public abstract class Server {
      *         deserialized, or the user is not authorized
      */ 
     private void processConnectionContext(RpcWritable.Buffer buffer)
-        throws RpcServerException {
+        throws RpcServerException {                                                 // 处理请求连接的上下文
       // allow only one connection context during a session
-      if (connectionContextRead) {
+      if (connectionContextRead) {                                                  // 在会话期间只允许一个连接上下文
         throw new FatalRpcServerException(
             RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
             "Connection context already processed");
       }
-      connectionContext = getMessage(IpcConnectionContextProto.getDefaultInstance(), buffer);
+      connectionContext = getMessage(IpcConnectionContextProto.getDefaultInstance(), buffer);   // 从 buffer 中构造连接上下文
       protocolName = connectionContext.hasProtocol() ? connectionContext
           .getProtocol() : null;
 
-      UserGroupInformation protocolUser = ProtoUtil.getUgi(connectionContext);
+      UserGroupInformation protocolUser = ProtoUtil.getUgi(connectionContext);      // 获取 rpc 调用的远程用户和协议类名
       if (authProtocol == AuthProtocol.NONE) {
         user = protocolUser;
       } else {
@@ -2244,7 +2244,7 @@ public abstract class Server {
         //different from the 'user', it is a proxy user scenario. However, 
         //this is not allowed if user authenticated with DIGEST.
         if ((protocolUser != null)
-            && (!protocolUser.getUserName().equals(user.getUserName()))) {
+            && (!protocolUser.getUserName().equals(user.getUserName()))) {          // 如果 user 于 protocolUser 不同，则说明是 proxy 用户
           if (authMethod == AuthMethod.TOKEN) {
             // Not allowed to doAs if token authentication is used
             throw new FatalRpcServerException(
@@ -2264,9 +2264,9 @@ public abstract class Server {
       }
       authorizeConnection();
       // don't set until after authz because connection isn't established
-      connectionContextRead = true;
+      connectionContextRead = true;                                                 // 处理完 rpc 调用上下文，设置为已经处理
       if (user != null) {
-        connectionManager.incrUserConnections(user.getShortUserName());
+        connectionManager.incrUserConnections(user.getShortUserName());             // 记录某个用户建立的连接数
       }
     }
     
@@ -2283,14 +2283,14 @@ public abstract class Server {
         LOG.debug("Have read input token of size " + inBuf.length
             + " for processing by saslServer.unwrap()");
       }
-      inBuf = saslServer.unwrap(inBuf, 0, inBuf.length);
+      inBuf = saslServer.unwrap(inBuf, 0, inBuf.length);                            // 解包 inBuf 中的数据，创建可读 channel
       ReadableByteChannel ch = Channels.newChannel(new ByteArrayInputStream(
           inBuf));
       // Read all RPCs contained in the inBuf, even partial ones
       while (!shouldClose()) { // stop if a fatal response has been sent.
         int count = -1;
         if (unwrappedDataLengthBuffer.remaining() > 0) {
-          count = channelRead(ch, unwrappedDataLengthBuffer);
+          count = channelRead(ch, unwrappedDataLengthBuffer);                       // 获取解包后的 rpc 请求长度
           if (count <= 0 || unwrappedDataLengthBuffer.remaining() > 0)
             return;
         }
@@ -2301,7 +2301,7 @@ public abstract class Server {
           unwrappedData = ByteBuffer.allocate(unwrappedDataLength);
         }
 
-        count = channelRead(ch, unwrappedData);
+        count = channelRead(ch, unwrappedData);                                     // 获取解包后的 rpc 请求数据
         if (count <= 0 || unwrappedData.remaining() > 0)
           return;
 
@@ -2310,7 +2310,7 @@ public abstract class Server {
           unwrappedData.flip();
           ByteBuffer requestData = unwrappedData;
           unwrappedData = null; // null out in case processOneRpc throws.
-          processOneRpc(requestData);
+          processOneRpc(requestData);                                               // 开始处理 rpc 数据
         }
       }
     }
@@ -2318,12 +2318,12 @@ public abstract class Server {
     /**
      * Process one RPC Request from buffer read from socket stream 
      *  - decode rpc in a rpc-Call
-     *  - handle out-of-band RPC requests such as the initial connectionContext
-     *  - A successfully decoded RpcCall will be deposited in RPC-Q and
-     *    its response will be sent later when the request is processed.
+     *  - handle out-of-band RPC requests such as the initial connectionContext     // 1. 在rpc中解码 rpcCall
+     *  - A successfully decoded RpcCall will be deposited in RPC-Q and             // 2. 处理带外RPC请求，如初始 connectionContext
+     *    its response will be sent later when the request is processed.            // 3. 成功解码的RpcCall被存入RPC-Q，它的响应将在请求被处理后被发送
      * 
      * Prior to this call the connectionHeader ("hrpc...") has been handled and
-     * if SASL then SASL has been established and the buf we are passed
+     * if SASL then SASL has been established and the buf we are passed             // 如果 connectionHeader 已经被处理并且 SASL 已经建立则优先处理
      * has been unwrapped from SASL.
      * 
      * @param bb - contains the RPC request header and the rpc request
@@ -2332,7 +2332,7 @@ public abstract class Server {
      * @throws InterruptedException
      */
     private void processOneRpc(ByteBuffer bb)
-        throws IOException, InterruptedException {
+        throws IOException, InterruptedException {                                  // 处理一个 RPC 请求的数据，ByteBuffer 中包含 rpc 头和数据
       // exceptions that escape this method are fatal to the connection.
       // setupResponse will use the rpc status to determine if the connection
       // should be closed.
@@ -2341,7 +2341,7 @@ public abstract class Server {
       try {
         final RpcWritable.Buffer buffer = RpcWritable.Buffer.wrap(bb);
         final RpcRequestHeaderProto header =
-            getMessage(RpcRequestHeaderProto.getDefaultInstance(), buffer);
+            getMessage(RpcRequestHeaderProto.getDefaultInstance(), buffer);         // 从 buffer 中构造 pb 格式的 RPC 请求头，包含 callId、重试等信息
         callId = header.getCallId();
         retry = header.getRetryCount();
         if (LOG.isDebugEnabled()) {
@@ -2349,16 +2349,16 @@ public abstract class Server {
         }
         checkRpcHeaders(header);
 
-        if (callId < 0) { // callIds typically used during connection setup
-          processRpcOutOfBandRequest(header, buffer);
-        } else if (!connectionContextRead) {
+        if (callId < 0) { // callIds typically used during connection setup         // callId 是由用户端设置的，是唯一的
+          processRpcOutOfBandRequest(header, buffer);                               // callId 通常在连接建立期间使用，如果小于 0 则处理带外请求，首次请求
+        } else if (!connectionContextRead) {                                        // callId 一旦被设置，则一定已经处理过了 连接上下文
           throw new FatalRpcServerException(
               RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
               "Connection context not established");
         } else {
-          processRpcRequest(header, buffer);
+          processRpcRequest(header, buffer);                                        // 如果一切处理正常，开始处理请求数据，正常的 rpc 会异步处理
         }
-      } catch (RpcServerException rse) {
+      } catch (RpcServerException rse) {                                            // 如果 RpcServer 内部异常，则提示客户端重试
         // inform client of error, but do not rethrow else non-fatal
         // exceptions will close connection!
         if (LOG.isDebugEnabled()) {
@@ -2372,7 +2372,7 @@ public abstract class Server {
         setupResponse(call,
             rse.getRpcStatusProto(), rse.getRpcErrorCodeProto(), null,
             t.getClass().getName(), t.getMessage());
-        sendResponse(call);
+        sendResponse(call);                                                         // 构造异常的响应并返回到客户端
       }
     }
 
@@ -2382,7 +2382,7 @@ public abstract class Server {
      * @throws RpcServerException - header contains invalid values
      */
     private void checkRpcHeaders(RpcRequestHeaderProto header)
-        throws RpcServerException {
+        throws RpcServerException {                                                 // 检查 RPC 请求头是否有效
       if (!header.hasRpcOp()) {
         String err = " IPC Server: No rpc op in rpcRequestHeader";
         throw new FatalRpcServerException(
@@ -2398,7 +2398,7 @@ public abstract class Server {
       // If we know the rpc kind, get its class so that we can deserialize
       // (Note it would make more sense to have the handler deserialize but 
       // we continue with this original design.
-      if (!header.hasRpcKind()) {
+      if (!header.hasRpcKind()) {                                                   // 如果没有指定 rpc 类型，则抛出异常，因为需要指定 rpc 调用的方法
         String err = " IPC Server: No rpc kind in rpcRequestHeader";
         throw new FatalRpcServerException(
             RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER, err);
@@ -2407,9 +2407,9 @@ public abstract class Server {
 
     /**
      * Process an RPC Request 
-     *   - the connection headers and context must have been already read.
-     *   - Based on the rpcKind, decode the rpcRequest.
-     *   - A successfully decoded RpcCall will be deposited in RPC-Q and
+     *   - the connection headers and context must have been already read.          // 连接头和上下文必须已经读取
+     *   - Based on the rpcKind, decode the rpcRequest.                             // 根据 rpcKind 的方法，解析 rpcRequest
+     *   - A successfully decoded RpcCall will be deposited in RPC-Q and            // 解析 RpcCall 并放入 RPC-Q 中等待执行调用
      *     its response will be sent later when the request is processed.
      * @param header - RPC request header
      * @param buffer - stream to request payload
@@ -2422,9 +2422,9 @@ public abstract class Server {
      */
     private void processRpcRequest(RpcRequestHeaderProto header,
         RpcWritable.Buffer buffer) throws RpcServerException,
-        InterruptedException {
+        InterruptedException {                                                      // 这里开始处理正常的 rpc 请求，正常的 rpc 会异步处理
       Class<? extends Writable> rpcRequestClass = 
-          getRpcRequestWrapper(header.getRpcKind());
+          getRpcRequestWrapper(header.getRpcKind());                                // 获取 rpc 调用类，一般是 ProtobufRpcEngine，获取失败则返回异常信息
       if (rpcRequestClass == null) {
         LOG.warn("Unknown rpc kind "  + header.getRpcKind() + 
             " from client " + getHostAddress());
@@ -2435,7 +2435,7 @@ public abstract class Server {
       }
       Writable rpcRequest;
       try { //Read the rpc request
-        rpcRequest = buffer.newInstance(rpcRequestClass, conf);
+        rpcRequest = buffer.newInstance(rpcRequestClass, conf);                     // 从 buffer 中构造 rpc 请求对象
       } catch (RpcServerException rse) { // lets tests inject failures.
         throw rse;
       } catch (Throwable t) { // includes runtime exception from newInstance
@@ -2449,7 +2449,7 @@ public abstract class Server {
         
       TraceScope traceScope = null;
       if (header.hasTraceInfo()) {
-        if (tracer != null) {
+        if (tracer != null) {                                                       // 如果传入的RPC包含跟踪信息，则始终保持跟踪
           // If the incoming RPC included tracing info, always continue the
           // trace
           SpanId parentSpanId = new SpanId(
@@ -2463,7 +2463,7 @@ public abstract class Server {
       }
 
       CallerContext callerContext = null;
-      if (header.hasCallerContext()) {
+      if (header.hasCallerContext()) {                                              // 如果有调用上下文，则构造上下文对象
         callerContext =
             new CallerContext.Builder(header.getCallerContext().getContext())
                 .setSignature(header.getCallerContext().getSignature()
@@ -2474,13 +2474,13 @@ public abstract class Server {
       RpcCall call = new RpcCall(this, header.getCallId(),
           header.getRetryCount(), rpcRequest,
           ProtoUtil.convert(header.getRpcKind()),
-          header.getClientId().toByteArray(), traceScope, callerContext);
+          header.getClientId().toByteArray(), traceScope, callerContext);           // 从 rpc 请求对象构造等待处理的 RpcCall 对象
 
       // Save the priority level assignment by the scheduler
-      call.setPriorityLevel(callQueue.getPriorityLevel(call));
+      call.setPriorityLevel(callQueue.getPriorityLevel(call));                      // 设置该 RpcCall 对象的优先级，由 rpc scheduler 提供
 
       try {
-        internalQueueCall(call);
+        internalQueueCall(call);                                                    // 将 rpc 调用对象放入队列，等待异步处理
       } catch (RpcServerException rse) {
         throw rse;
       } catch (IOException ioe) {
@@ -2504,9 +2504,9 @@ public abstract class Server {
      */
     private void processRpcOutOfBandRequest(RpcRequestHeaderProto header,
         RpcWritable.Buffer buffer) throws RpcServerException,
-            IOException, InterruptedException {
+            IOException, InterruptedException {                                     // 带外请求，如果需要，通过协商SASL建立RPC连接，然后读取并授权连接头
       final int callId = header.getCallId();
-      if (callId == CONNECTION_CONTEXT_CALL_ID) {
+      if (callId == CONNECTION_CONTEXT_CALL_ID) {                                   // 如果该 rpc 是用于建立连接上下文的请求
         // SASL must be established prior to connection context
         if (authProtocol == AuthProtocol.SASL && !saslContextEstablished) {
           throw new FatalRpcServerException(
@@ -2514,7 +2514,7 @@ public abstract class Server {
               "Connection header sent during SASL negotiation");
         }
         // read and authorize the user
-        processConnectionContext(buffer);
+        processConnectionContext(buffer);                                           // 处理请求连接上下文，建立请求的用户、请求处理类等信息
       } else if (callId == AuthProtocol.SASL.callId) {
         // if client was switched to simple, ignore first SASL message
         if (authProtocol != AuthProtocol.SASL) {
@@ -2522,7 +2522,7 @@ public abstract class Server {
               RpcErrorCodeProto.FATAL_INVALID_RPC_HEADER,
               "SASL protocol not requested by client");
         }
-        saslReadAndProcess(buffer);
+        saslReadAndProcess(buffer);                                                 // 根据 buffer 中信息建立 SASL 连接并处理
       } else if (callId == PING_CALL_ID) {
         LOG.debug("Received ping message");
       } else {
@@ -2536,7 +2536,7 @@ public abstract class Server {
      * Authorize proxy users to access this server
      * @throws RpcServerException - user is not allowed to proxy
      */
-    private void authorizeConnection() throws RpcServerException {
+    private void authorizeConnection() throws RpcServerException {                  // 授权代理用户访问此服务器
       try {
         // If auth method is TOKEN, the token was obtained by the
         // real user for the effective user, therefore not required to
@@ -2568,7 +2568,7 @@ public abstract class Server {
      */
     @SuppressWarnings("unchecked")
     <T extends Message> T getMessage(Message message,
-        RpcWritable.Buffer buffer) throws RpcServerException {
+        RpcWritable.Buffer buffer) throws RpcServerException {                      // 从输入流中解析 protobuf
       try {
         return (T)buffer.getValue(message);
       } catch (Exception ioe) {
@@ -2579,10 +2579,10 @@ public abstract class Server {
       }
     }
 
-    // ipc reader threads should invoke this directly, whereas handlers
-    // must invoke call.sendResponse to allow lifecycle management of
+    // ipc reader threads should invoke this directly, whereas handlers             // ipc Reader 线程应该直接调用它，
+    // must invoke call.sendResponse to allow lifecycle management of               // 处理程序必须调用这里来允许对外部，推迟的，延期调用等进行生命周期管理
     // external, postponed, deferred calls, etc.
-    private void sendResponse(RpcCall call) throws IOException {
+    private void sendResponse(RpcCall call) throws IOException {                    // 将处理好的 call 交给 responder 线程处理
       responder.doRespond(call);
     }
 
@@ -2602,7 +2602,7 @@ public abstract class Server {
       this.serviceClass = serviceClass;
     }
 
-    private synchronized void close() {
+    private synchronized void close() {                                             // 关闭连接，清空数据 buffer，关闭 channel、socket
       disposeSasl();
       data = null;
       dataLengthBuffer = null;
@@ -2618,7 +2618,7 @@ public abstract class Server {
     }
   }
 
-  public void queueCall(Call call) throws IOException, InterruptedException {
+  public void queueCall(Call call) throws IOException, InterruptedException {       // 为外部服务提供了使用当前 Server 处理 rpc call 的方法
     // external non-rpc calls don't need server exception wrapper.
     try {
       internalQueueCall(call);
@@ -2628,7 +2628,7 @@ public abstract class Server {
   }
 
   private void internalQueueCall(Call call)
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException {                                    // 将 rpc 请求对象放入 callQueue，等待异步处理
     try {
       callQueue.put(call); // queue the call; maybe blocked here
     } catch (CallQueueOverflowException cqe) {
@@ -2645,7 +2645,7 @@ public abstract class Server {
   }
 
   /** Handles queued calls . */
-  private class Handler extends Thread {
+  private class Handler extends Thread {                                            // Handler 即处理 rpc 调用的线程，其会调用 call.call() 执行调用
     public Handler(int instanceNumber) {
       this.setDaemon(true);
       this.setName("IPC Server handler "+ instanceNumber + " on " + port);
@@ -2658,11 +2658,11 @@ public abstract class Server {
       while (running) {
         TraceScope traceScope = null;
         try {
-          final Call call = callQueue.take(); // pop the queue; maybe blocked here
+          final Call call = callQueue.take(); // pop the queue; maybe blocked here  // 从 callQueue 中获取一个 Call，准备处理
           if (LOG.isDebugEnabled()) {
             LOG.debug(Thread.currentThread().getName() + ": " + call + " for RpcKind " + call.rpcKind);
           }
-          CurCall.set(call);
+          CurCall.set(call);                                                        // 设置当前 Handler 线程正在处理的 rpc Call
           if (call.traceScope != null) {
             call.traceScope.reattach();
             traceScope = call.traceScope;
@@ -2674,7 +2674,7 @@ public abstract class Server {
           if (remoteUser != null) {
             remoteUser.doAs(call);
           } else {
-            call.run();
+            call.run();                                                             // 执行 rpc call 的 run 方法，其内部会调用 rpc 请求调用的函数
           }
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
@@ -2691,7 +2691,7 @@ public abstract class Server {
                 StringUtils.stringifyException(e));
           }
         } finally {
-          CurCall.set(null);
+          CurCall.set(null);                                                        // 调用完成后，清空 Handler 线程的 CurCall，以便处理下一个 rpc
           IOUtils.cleanupWithLogger(LOG, traceScope);
         }
       }
@@ -2701,7 +2701,7 @@ public abstract class Server {
   }
 
   @VisibleForTesting
-  void logException(Logger logger, Throwable e, Call call) {
+  void logException(Logger logger, Throwable e, Call call) {                        // 打印异常日志，根据 exceptionsHandler 判断如何打印日志
     if (exceptionsHandler.isSuppressedLog(e.getClass())) {
       return; // Log nothing.
     }
@@ -2757,44 +2757,44 @@ public abstract class Server {
       int numReaders, int queueSizePerHandler, Configuration conf,
       String serverName, SecretManager<? extends TokenIdentifier> secretManager,
       String portRangeConfig)
-    throws IOException {
+    throws IOException {                                                            // 构造 server 对象
     this.bindAddress = bindAddress;
     this.conf = conf;
-    this.portRangeConfig = portRangeConfig;
+    this.portRangeConfig = portRangeConfig;                                         // 可变端口配置
     this.port = port;
     this.rpcRequestClass = rpcRequestClass; 
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
     this.maxDataLength = conf.getInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
-        CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
+        CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);                   // 通过 rpc 请求的最大可传输数据量，默认为 64M
     if (queueSizePerHandler != -1) {
-      this.maxQueueSize = handlerCount * queueSizePerHandler;
+      this.maxQueueSize = handlerCount * queueSizePerHandler;                       // rpc call 队列最大长度
     } else {
       this.maxQueueSize = handlerCount * conf.getInt(
           CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
-          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);      
+          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);           // callQueueSize 最大值，默认为 handlerCount * 100
     }
     this.maxRespSize = conf.getInt(
         CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
-        CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT);
+        CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT);          // 最大响应数据长度，默认 1M
     if (numReaders != -1) {
       this.readThreads = numReaders;
     } else {
       this.readThreads = conf.getInt(
           CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
-          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
+          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);             // 读线程数量，默认为 1
     }
     this.readerPendingConnectionQueue = conf.getInt(
         CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY,
-        CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT);
+        CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT); // 读线程连接数
 
     // Setup appropriate callqueue
     final String prefix = getQueueClassPrefix();
     this.callQueue = new CallQueueManager<Call>(getQueueClass(prefix, conf),
         getSchedulerClass(prefix, conf),
-        getClientBackoffEnable(prefix, conf), maxQueueSize, prefix, conf);
+        getClientBackoffEnable(prefix, conf), maxQueueSize, prefix, conf);          // callQueue 管理器，内部包含有 rpc 调度器
 
-    this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
+    this.secretManager = (SecretManager<TokenIdentifier>) secretManager;            // 该 RPC 的 token 管理器
     this.authorize = 
       conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
                       false);
@@ -2805,33 +2805,33 @@ public abstract class Server {
     
     // Start the listener here and let it bind to the port
     listener = new Listener();
-    this.port = listener.getAddress().getPort();    
+    this.port = listener.getAddress().getPort();                                    // RPC 端口监听器、端口
     connectionManager = new ConnectionManager();
     this.rpcMetrics = RpcMetrics.create(this, conf);
-    this.rpcDetailedMetrics = RpcDetailedMetrics.create(this.port);
+    this.rpcDetailedMetrics = RpcDetailedMetrics.create(this.port);                 // 构造 rpc metrics
     this.tcpNoDelay = conf.getBoolean(
         CommonConfigurationKeysPublic.IPC_SERVER_TCPNODELAY_KEY,
-        CommonConfigurationKeysPublic.IPC_SERVER_TCPNODELAY_DEFAULT);
+        CommonConfigurationKeysPublic.IPC_SERVER_TCPNODELAY_DEFAULT);               // 默认开启 nagle 算法
 
     this.setLogSlowRPC(conf.getBoolean(
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC,
-        CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT));
+        CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT));            // 是否记录慢 rpc 请求，默认不记录
 
     // Create the responder here
-    responder = new Responder();
+    responder = new Responder();                                                    // 发送响应数据到客户端的线程
     
     if (secretManager != null || UserGroupInformation.isSecurityEnabled()) {
       SaslRpcServer.init(conf);
       saslPropsResolver = SaslPropertiesResolver.getInstance(conf);
     }
     
-    this.exceptionsHandler.addTerseLoggingExceptions(StandbyException.class);
+    this.exceptionsHandler.addTerseLoggingExceptions(StandbyException.class);       // 增加异常处理
   }
   
   private RpcSaslProto buildNegotiateResponse(List<AuthMethod> authMethods)
       throws IOException {
     RpcSaslProto.Builder negotiateBuilder = RpcSaslProto.newBuilder();
-    if (authMethods.contains(AuthMethod.SIMPLE) && authMethods.size() == 1) {
+    if (authMethods.contains(AuthMethod.SIMPLE) && authMethods.size() == 1) {       // 根据 authMethods 构造协商响应
       // SIMPLE-only servers return success in response to negotiate
       negotiateBuilder.setState(SaslState.SUCCESS);
     } else {
@@ -2849,14 +2849,14 @@ public abstract class Server {
         }
       }
     }
-    return negotiateBuilder.build();
+    return negotiateBuilder.build();                                                // 如果需要安全认证，则需要构造协商认证请求
   }
 
   // get the security type from the conf. implicitly include token support
   // if a secret manager is provided, or fail if token is the conf value but
   // there is no secret manager
   private List<AuthMethod> getAuthMethods(SecretManager<?> secretManager,
-                                             Configuration conf) {
+                                             Configuration conf) {                  // 获取配置的授权方式
     AuthenticationMethod confAuthenticationMethod =
         SecurityUtil.getAuthenticationMethod(conf);        
     List<AuthMethod> authMethods = new ArrayList<AuthMethod>();
@@ -2877,7 +2877,7 @@ public abstract class Server {
     return authMethods;
   }
   
-  private void closeConnection(Connection connection) {
+  private void closeConnection(Connection connection) {                             // 异步关闭连接 Connection
     connectionManager.close(connection);
   }
 
@@ -2894,13 +2894,13 @@ public abstract class Server {
   private void setupResponse(
       RpcCall call, RpcStatusProto status, RpcErrorCodeProto erCode,
       Writable rv, String errorClass, String error)
-          throws IOException {
+          throws IOException {                                                      // 设置 rpc 调用的响应数据到 call 中
     // fatal responses will cause the reader to close the connection.
     if (status == RpcStatusProto.FATAL) {
-      call.connection.setShouldClose();
+      call.connection.setShouldClose();                                             // 如果 rpc FATAL 异常，则关闭该连接
     }
     RpcResponseHeaderProto.Builder headerBuilder =
-        RpcResponseHeaderProto.newBuilder();
+        RpcResponseHeaderProto.newBuilder();                                        // 构造 RpcResponseHeaderProto 消息，开始设置字段
     headerBuilder.setClientId(ByteString.copyFrom(call.clientId));
     headerBuilder.setCallId(call.callId);
     headerBuilder.setRetryCount(call.retryCount);
@@ -2910,7 +2910,7 @@ public abstract class Server {
     if (status == RpcStatusProto.SUCCESS) {
       RpcResponseHeaderProto header = headerBuilder.build();
       try {
-        setupResponse(call, header, rv);
+        setupResponse(call, header, rv);                                            // 如果 rpc 调用成功，则设置响应数据 rv
       } catch (Throwable t) {
         LOG.warn("Error serializing call response for call " + call, t);
         // Call back to same function - this is OK since the
@@ -2919,11 +2919,11 @@ public abstract class Server {
         setupResponse(call, RpcStatusProto.ERROR,
             RpcErrorCodeProto.ERROR_SERIALIZING_RESPONSE,
             null, t.getClass().getName(),
-            StringUtils.stringifyException(t));
+            StringUtils.stringifyException(t));                                     // 如果设置数据异常，则将 rpc 调用标记为 ERROR
         return;
       }
     } else { // Rpc Failure
-      headerBuilder.setExceptionClassName(errorClass);
+      headerBuilder.setExceptionClassName(errorClass);                              // 如果 rpc 调用失败，则设置出错的信息
       headerBuilder.setErrorMsg(error);
       headerBuilder.setErrorDetail(erCode);
       setupResponse(call, headerBuilder.build(), null);
@@ -2931,22 +2931,22 @@ public abstract class Server {
   }
 
   private void setupResponse(RpcCall call,
-      RpcResponseHeaderProto header, Writable rv) throws IOException {
+      RpcResponseHeaderProto header, Writable rv) throws IOException {              // 将响应数据 rv 写入 call 中
     final byte[] response;
     if (rv == null || (rv instanceof RpcWritable.ProtobufWrapper)) {
-      response = setupResponseForProtobuf(header, rv);
+      response = setupResponseForProtobuf(header, rv);                              // 将 rv 数据写入响应中
     } else {
       response = setupResponseForWritable(header, rv);
     }
-    if (response.length > maxRespSize) {
+    if (response.length > maxRespSize) {                                            // 响应数据过大，则只打印日志
       LOG.warn("Large response size " + response.length + " for call "
           + call.toString());
     }
-    call.setResponse(ByteBuffer.wrap(response));
+    call.setResponse(ByteBuffer.wrap(response));                                    // 设置 rpc call 响应数据，等待 call 异步处理
   }
 
   private byte[] setupResponseForWritable(
-      RpcResponseHeaderProto header, Writable rv) throws IOException {
+      RpcResponseHeaderProto header, Writable rv) throws IOException {              // 构造 Writable 格式的响应数据
     ResponseBuffer buf = responseBuffer.get().reset();
     try {
       RpcWritable.wrap(header).writeTo(buf);
@@ -2967,7 +2967,7 @@ public abstract class Server {
   // writing to a pre-allocated array is the most efficient way to construct
   // a protobuf response.
   private byte[] setupResponseForProtobuf(
-      RpcResponseHeaderProto header, Writable rv) throws IOException {
+      RpcResponseHeaderProto header, Writable rv) throws IOException {              // 构造 Protobuf 格式的响应数据
     Message payload = (rv != null)
         ? ((RpcWritable.ProtobufWrapper)rv).getMessage() : null;
     int length = getDelimitedLength(header);
@@ -2984,7 +2984,7 @@ public abstract class Server {
     cos.writeRawVarint32(header.getSerializedSize());
     header.writeTo(cos);
     if (payload != null) {
-      cos.writeRawVarint32(payload.getSerializedSize());
+      cos.writeRawVarint32(payload.getSerializedSize());                            // 写入序列化后的数据到 buf 中
       payload.writeTo(cos);
     }
     return buf;
@@ -3011,7 +3011,7 @@ public abstract class Server {
   private void setupResponseOldVersionFatal(ByteArrayOutputStream response, 
                              RpcCall call,
                              Writable rv, String errorClass, String error) 
-  throws IOException {
+  throws IOException {                                                              // 为使用旧版本 Hadoop 的客户端的IPC致命错误设置响应
     final int OLD_VERSION_FATAL_STATUS = -1;
     response.reset();
     DataOutputStream out = new DataOutputStream(response);
@@ -3022,7 +3022,7 @@ public abstract class Server {
     call.setResponse(ByteBuffer.wrap(response.toByteArray()));
   }
 
-  private void wrapWithSasl(RpcCall call) throws IOException {
+  private void wrapWithSasl(RpcCall call) throws IOException {                      // 包装响应的数据到 call 中
     if (call.connection.saslServer != null) {
       byte[] token = call.rpcResponse.array();
       // synchronization may be needed since there can be multiple Handler
@@ -3042,7 +3042,7 @@ public abstract class Server {
           .setState(SaslState.WRAP)
           .setToken(ByteString.copyFrom(token))
           .build();
-      setupResponse(call, saslHeader, RpcWritable.wrap(saslMessage));
+      setupResponse(call, saslHeader, RpcWritable.wrap(saslMessage));               // 将包装好的响应数据 saslMessage 写入 call 中
     }
   }
   
@@ -3058,7 +3058,7 @@ public abstract class Server {
   }
 
   /** Starts the service.  Must be called before any calls will be handled. */
-  public synchronized void start() {
+  public synchronized void start() {                                                // 启动 RPC Server，启动 responder、listener、handlers 线程
     responder.start();
     listener.start();
     handlers = new Handler[handlerCount];
@@ -3070,7 +3070,7 @@ public abstract class Server {
   }
 
   /** Stops the service.  No new calls will be handled after this is called. */
-  public synchronized void stop() {
+  public synchronized void stop() {                                                 // 停止 RPC Server，停止 handlers、listener、responder 线程
     LOG.info("Stopping server on " + port);
     running = false;
     if (handlers != null) {
@@ -3092,7 +3092,7 @@ public abstract class Server {
    * Does not wait for all subthreads to finish.
    *  See {@link #stop()}.
    */
-  public synchronized void join() throws InterruptedException {
+  public synchronized void join() throws InterruptedException {                     // 等待 RPC Server 结束
     while (running) {
       wait();
     }
@@ -3118,7 +3118,7 @@ public abstract class Server {
   
   /** Called for each call. */
   public abstract Writable call(RPC.RpcKind rpcKind, String protocol,
-      Writable param, long receiveTime) throws Exception;
+      Writable param, long receiveTime) throws Exception;                           // rpc 调用的执行入口，由具体的实现类实现
   
   /**
    * Authorize the incoming client connection.
@@ -3129,7 +3129,7 @@ public abstract class Server {
    * @throws AuthorizationException when the client isn't authorized to talk the protocol
    */
   private void authorize(UserGroupInformation user, String protocolName,
-      InetAddress addr) throws AuthorizationException {
+      InetAddress addr) throws AuthorizationException {                             // 授权传入的客户端连接
     if (authorize) {
       if (protocolName == null) {
         throw new AuthorizationException("Null protocol not authorized");
@@ -3141,7 +3141,7 @@ public abstract class Server {
         throw new AuthorizationException("Unknown protocol: " + 
                                          protocolName);
       }
-      serviceAuthorizationManager.authorize(user, protocol, getConf(), addr);
+      serviceAuthorizationManager.authorize(user, protocol, getConf(), addr);       // 使用 serviceAuthorizationManager 授权客户端连接
     }
   }
   
@@ -3159,14 +3159,14 @@ public abstract class Server {
    * The number of open RPC conections
    * @return the number of open rpc connections
    */
-  public int getNumOpenConnections() {
+  public int getNumOpenConnections() {                                              // 获取当前 RPC Server 上的连接数
     return connectionManager.size();
   }
 
   /**
    * Get the NumOpenConnections/User.
    */
-  public String getNumOpenConnectionsPerUser() {
+  public String getNumOpenConnectionsPerUser() {                                    // 获取当前 RPC Server 上每个用户的连接数
     ObjectMapper mapper = new ObjectMapper();
     try {
       return mapper
@@ -3190,7 +3190,7 @@ public abstract class Server {
    * The number of rpc calls in the queue.
    * @return The number of rpc calls in the queue.
    */
-  public int getCallQueueLen() {
+  public int getCallQueueLen() {                                                    // 获取等待处理调用的 rpc 调用数量 CallQueueLength
     return callQueue.size();
   }
 
@@ -3223,7 +3223,7 @@ public abstract class Server {
    * done in chunks of this size. Most RPC requests and responses would be
    * be smaller.
    */
-  private static int NIO_BUFFER_LIMIT = 8*1024; //should not be more than 64KB.
+  private static int NIO_BUFFER_LIMIT = 8*1024; //should not be more than 64KB.     // NIO 缓存，最大 8M
   
   /**
    * This is a wrapper around {@link WritableByteChannel#write(ByteBuffer)}.
@@ -3236,7 +3236,7 @@ public abstract class Server {
    * @see WritableByteChannel#write(ByteBuffer)
    */
   private int channelWrite(WritableByteChannel channel, 
-                           ByteBuffer buffer) throws IOException {
+                           ByteBuffer buffer) throws IOException {                  // 写 buffer 的数据到 channel 中
     
     int count =  (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
                  channel.write(buffer) : channelIO(null, channel, buffer);
@@ -3259,7 +3259,7 @@ public abstract class Server {
                           ByteBuffer buffer) throws IOException {
     
     int count = (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
-                channel.read(buffer) : channelIO(channel, null, buffer);
+                channel.read(buffer) : channelIO(channel, null, buffer);            // 如果小于 NIO 缓存大小，则直接读取，否则使用 channelIO 读取
     if (count > 0) {
       rpcMetrics.incrReceivedBytes(count);
     }
@@ -3276,7 +3276,7 @@ public abstract class Server {
    */
   private static int channelIO(ReadableByteChannel readCh, 
                                WritableByteChannel writeCh,
-                               ByteBuffer buf) throws IOException {
+                               ByteBuffer buf) throws IOException {                 // 如果要读取的数据量大于 NIO 缓存大小，则用该方法读写数据到缓存
     
     int originalLimit = buf.limit();
     int initialRemaining = buf.remaining();
@@ -3287,7 +3287,7 @@ public abstract class Server {
         int ioSize = Math.min(buf.remaining(), NIO_BUFFER_LIMIT);
         buf.limit(buf.position() + ioSize);
         
-        ret = (readCh == null) ? writeCh.write(buf) : readCh.read(buf); 
+        ret = (readCh == null) ? writeCh.write(buf) : readCh.read(buf);             // 每次读取或者写入 NIO 缓存大小的数据
         
         if (ret < ioSize) {
           break;
@@ -3302,12 +3302,12 @@ public abstract class Server {
     return (nBytes > 0) ? nBytes : ret;
   }
   
-  private class ConnectionManager {
+  private class ConnectionManager {                                                 // rpc socket 连接管理器
     final private AtomicInteger count = new AtomicInteger();
     final private AtomicLong droppedConnections = new AtomicLong();
-    final private Set<Connection> connections;
+    final private Set<Connection> connections;                                      // 管理的所有连接
     /* Map to maintain the statistics per User */
-    final private Map<String, Integer> userToConnectionsMap;
+    final private Map<String, Integer> userToConnectionsMap;                        // 保存了用户到用户建立的连接的映射
     final private Object userToConnectionsMapLock = new Object();
 
     final private Timer idleScanTimer;
@@ -3319,28 +3319,28 @@ public abstract class Server {
     
     ConnectionManager() {
       this.idleScanTimer = new Timer(
-          "IPC Server idle connection scanner for port " + getPort(), true);
+          "IPC Server idle connection scanner for port " + getPort(), true);        // 后台连接扫描线程，扫描并关闭空闲时间过长的连接
       this.idleScanThreshold = conf.getInt(
           CommonConfigurationKeysPublic.IPC_CLIENT_IDLETHRESHOLD_KEY,
-          CommonConfigurationKeysPublic.IPC_CLIENT_IDLETHRESHOLD_DEFAULT);
+          CommonConfigurationKeysPublic.IPC_CLIENT_IDLETHRESHOLD_DEFAULT);          // 连接扫描大小限制
       this.idleScanInterval = conf.getInt(
           CommonConfigurationKeys.IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_KEY,
-          CommonConfigurationKeys.IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_DEFAULT);
+          CommonConfigurationKeys.IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_DEFAULT);  // 连接扫描时间间隔，默认 10s
       this.maxIdleTime = 2 * conf.getInt(
           CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
-          CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT);
+          CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT); // 默认的最长空闲时间为 20s
       this.maxIdleToClose = conf.getInt(
           CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_KEY,
-          CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_DEFAULT);
+          CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_DEFAULT);               // 默认每次扫描最多关闭 10 个连接
       this.maxConnections = conf.getInt(
           CommonConfigurationKeysPublic.IPC_SERVER_MAX_CONNECTIONS_KEY,
-          CommonConfigurationKeysPublic.IPC_SERVER_MAX_CONNECTIONS_DEFAULT);
+          CommonConfigurationKeysPublic.IPC_SERVER_MAX_CONNECTIONS_DEFAULT);        // 允许的最大连接数
       // create a set with concurrency -and- a thread-safe iterator, add 2
       // for listener and idle closer threads
       this.connections = Collections.newSetFromMap(
           new ConcurrentHashMap<Connection,Boolean>(
-              maxQueueSize, 0.75f, readThreads+2));
-      this.userToConnectionsMap = new ConcurrentHashMap<>();
+              maxQueueSize, 0.75f, readThreads+2));                                 // 设置并发度为 readThreads 数量 + 2，默认为 3
+      this.userToConnectionsMap = new ConcurrentHashMap<>();                        // 记录某个用户的连接数
     }
 
     private boolean add(Connection connection) {
@@ -3359,7 +3359,7 @@ public abstract class Server {
       return removed;
     }
 
-    void incrUserConnections(String user) {
+    void incrUserConnections(String user) {                                         // 记录某个用户建立的连接池
       synchronized (userToConnectionsMapLock) {
         Integer count = userToConnectionsMap.get(user);
         if (count == null) {
@@ -3409,7 +3409,7 @@ public abstract class Server {
       return connections.toArray(new Connection[0]);
     }
 
-    Connection register(SocketChannel channel) {
+    Connection register(SocketChannel channel) {                                    // 注册连接，如果连接数达到最大值 则不再添加
       if (isFull()) {
         return null;
       }
@@ -3423,7 +3423,7 @@ public abstract class Server {
       return connection;
     }
     
-    boolean close(Connection connection) {
+    boolean close(Connection connection) {                                          // 关闭一个连接，并在记录的用户连接中删除
       boolean exists = remove(connection);
       if (exists) {
         if (LOG.isDebugEnabled()) {
@@ -3444,7 +3444,7 @@ public abstract class Server {
     
     // synch'ed to avoid explicit invocation upon OOM from colliding with
     // timer task firing
-    synchronized void closeIdle(boolean scanAll) {
+    synchronized void closeIdle(boolean scanAll) {                                  // 扫描线程，关闭空闲时间过长的连接
       long minLastContact = Time.now() - maxIdleTime;
       // concurrent iterator might miss new connections added
       // during the iteration, but that's ok because they won't
@@ -3452,14 +3452,14 @@ public abstract class Server {
       int closed = 0;
       for (Connection connection : connections) {
         // stop if connections dropped below threshold unless scanning all
-        if (!scanAll && size() < idleScanThreshold) {
+        if (!scanAll && size() < idleScanThreshold) {                               // 当前连接数小于阈值才继续扫描
           break;
         }
         // stop if not scanning all and max connections are closed
         if (connection.isIdle() &&
             connection.getLastContact() < minLastContact &&
             close(connection) &&
-            !scanAll && (++closed == maxIdleToClose)) {
+            !scanAll && (++closed == maxIdleToClose)) {                             // 如果 connection 空闲超过一定时间则关闭连接
           break;
         }
       }
@@ -3481,7 +3481,7 @@ public abstract class Server {
       idleScanTimer.cancel();
     }
     
-    private void scheduleIdleScanTask() {
+    private void scheduleIdleScanTask() {                                           // 启动扫描任务
       if (!running) {
         return;
       }
@@ -3495,7 +3495,7 @@ public abstract class Server {
             LOG.debug(Thread.currentThread().getName()+": task running");
           }
           try {
-            closeIdle(false);
+            closeIdle(false);                                                       // 执行扫描空闲连接的任务
           } finally {
             // explicitly reschedule so next execution occurs relative
             // to the end of this scan, not the beginning

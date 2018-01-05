@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * RPC Engine for for protobuf based RPCs.
  */
 @InterfaceStability.Evolving
-public class ProtobufRpcEngine implements RpcEngine {
+public class ProtobufRpcEngine implements RpcEngine {                               // RPC Server 的 Protobuf 通信格式的实现类
   public static final Logger LOG =
       LoggerFactory.getLogger(ProtobufRpcEngine.class);
   private static final ThreadLocal<AsyncGet<Message, Exception>>
@@ -63,7 +63,7 @@ public class ProtobufRpcEngine implements RpcEngine {
   static { // Register the rpcRequest deserializer for ProtobufRpcEngine
     org.apache.hadoop.ipc.Server.registerProtocolEngine(
         RPC.RpcKind.RPC_PROTOCOL_BUFFER, RpcProtobufRequest.class,
-        new Server.ProtoBufRpcInvoker());
+        new Server.ProtoBufRpcInvoker());                                           // 注册 PB 格式 RPC 序列化的实现类
   }
 
   private static final ClientCache CLIENTS = new ClientCache();
@@ -470,7 +470,7 @@ public class ProtobufRpcEngine implements RpcEngine {
        * </ol>
        */
       public Writable call(RPC.Server server, String connectionProtocolName,
-          Writable writableRequest, long receiveTime) throws Exception {
+          Writable writableRequest, long receiveTime) throws Exception {            // ProtobufRpcEngine 中调用 rpc 具体的实现的方法
         RpcProtobufRequest request = (RpcProtobufRequest) writableRequest;
         RequestHeaderProto rpcRequest = request.getRequestHeader();
         String methodName = rpcRequest.getMethodName();
@@ -493,14 +493,14 @@ public class ProtobufRpcEngine implements RpcEngine {
 
         String declaringClassProtoName = 
             rpcRequest.getDeclaringClassProtocolName();
-        long clientVersion = rpcRequest.getClientProtocolVersion();
+        long clientVersion = rpcRequest.getClientProtocolVersion();                 // 从 rpcRequest 中获取需要方法的实现的 PB server 名
         if (server.verbose)
           LOG.info("Call: connectionProtocolName=" + connectionProtocolName + 
               ", method=" + methodName);
         
         ProtoClassProtoImpl protocolImpl = getProtocolImpl(server, 
                               declaringClassProtoName, clientVersion);
-        BlockingService service = (BlockingService) protocolImpl.protocolImpl;
+        BlockingService service = (BlockingService) protocolImpl.protocolImpl;      // 获取 rpc 方法的实现类的实例
         MethodDescriptor methodDescriptor = service.getDescriptorForType()
             .findMethodByName(methodName);
         if (methodDescriptor == null) {
@@ -520,7 +520,7 @@ public class ProtobufRpcEngine implements RpcEngine {
         try {
           server.rpcDetailedMetrics.init(protocolImpl.protocolClass);
           currentCallInfo.set(new CallInfo(server, methodName));
-          result = service.callBlockingMethod(methodDescriptor, null, param);
+          result = service.callBlockingMethod(methodDescriptor, null, param);       // 阻塞式的调用 rpc 的方法实现
           // Check if this needs to be a deferred response,
           // by checking the ThreadLocal callback being set
           if (currentCallback.get() != null) {
@@ -552,9 +552,9 @@ public class ProtobufRpcEngine implements RpcEngine {
               methodName :
               exception.getClass().getSimpleName();
           server.updateMetrics(detailedMetricsName, qTime, processingTime,
-              isDeferred);
+              isDeferred);                                                          // 记录 rpc 的处理时间、排队时间等信息
         }
-        return RpcWritable.wrap(result);
+        return RpcWritable.wrap(result);                                            // 使用 RpcWritable 包装调用结果，返回 Server 类中处理，最终发给客户端
       }
     }
   }

@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class ServiceAuthorizationManager {                                          // 为服务请求处理服务级别权限的授权管理器，为服务指定 ACL 和机器列表
+public class ServiceAuthorizationManager {                                          // 管理服务级别请求权限的授权管理器，为服务指定 ACL 和机器列表
   static final String BLOCKED = ".blocked";
   static final String HOSTS = ".hosts";
 

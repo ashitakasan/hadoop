@@ -81,7 +81,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.LimitedPrivate(value = { "Common", "HDFS", "MapReduce", "Yarn" })
 @InterfaceStability.Evolving
-public class RPC {
+public class RPC {                                                                  // RPC 的一些 utils 公共方法与一些实现类
   final static int RPC_SERVICE_CLASS_DEFAULT = 0;
   public enum RpcKind {
     RPC_BUILTIN ((short) 1),         // Used for built in calls by tests
