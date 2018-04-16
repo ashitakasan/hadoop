@@ -861,7 +861,7 @@ public class RPC {
    }
 
    ArrayList<Map<ProtoNameVer, ProtoClassProtoImpl>> protocolImplMapArray = 
-       new ArrayList<Map<ProtoNameVer, ProtoClassProtoImpl>>(RpcKind.MAX_INDEX);
+       new ArrayList<Map<ProtoNameVer, ProtoClassProtoImpl>>(RpcKind.MAX_INDEX);                                        // 全局唯一的类，保存了 PB 接口对应的实现类，rpc 会调用实现类的方法
    
    Map<ProtoNameVer, ProtoClassProtoImpl> getProtocolImplMap(RPC.RpcKind rpcKind) {
      if (protocolImplMapArray.size() == 0) {// initialize for all rpc kinds

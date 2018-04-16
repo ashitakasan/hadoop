@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.factories.RpcServerFactory;
 import com.google.protobuf.BlockingService;
 
 @Private
-public class RpcServerFactoryPBImpl implements RpcServerFactory {
+public class RpcServerFactoryPBImpl implements RpcServerFactory {                   // yarn rpc 服务类的构造工厂
 
   private static final Log LOG = LogFactory.getLog(RpcServerFactoryPBImpl.class);
   private static final String PROTO_GEN_PACKAGE_NAME = "org.apache.hadoop.yarn.proto";
@@ -98,7 +98,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
     
     Object service = null;
     try {
-      service = constructor.newInstance(instance);
+      service = constructor.newInstance(instance);                                  // 提供给 rpc service 一个调用对象，该对象实现了 rpc 具体方法
     } catch (InvocationTargetException e) {
       throw new YarnRuntimeException(e);
     } catch (IllegalAccessException e) {
@@ -119,7 +119,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
       }
       try {
         method = protoClazz.getMethod("newReflectiveBlockingService",
-            pbProtocol.getInterfaces()[0]);
+            pbProtocol.getInterfaces()[0]);                                         // 调用 protobuf 中 server 实例的 newReflectiveBlockingService
         method.setAccessible(true);
         protoCache.putIfAbsent(protocol, method);
       } catch (NoSuchMethodException e) {
@@ -144,7 +144,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
     return PROTO_GEN_PACKAGE_NAME + "." + srcClassName + "$" + srcClassName + PROTO_GEN_CLASS_SUFFIX;  
   }
   
-  private String getPbServiceImplClassName(Class<?> clazz) {
+  private String getPbServiceImplClassName(Class<?> clazz) {                        // 默认的 rpc 服务类为 impl.pb.service 包下 PBServiceImpl 结尾的类
     String srcPackagePart = getPackageName(clazz);
     String srcClassName = getClassName(clazz);
     String destPackagePart = srcPackagePart + "." + PB_IMPL_PACKAGE_SUFFIX;
@@ -163,7 +163,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
 
   private Server createServer(Class<?> pbProtocol, InetSocketAddress addr, Configuration conf, 
       SecretManager<? extends TokenIdentifier> secretManager, int numHandlers, 
-      BlockingService blockingService, String portRangeConfig) throws IOException {
+      BlockingService blockingService, String portRangeConfig) throws IOException {   // 构造 rpc Server 类，用于接收 rpc 请求
     RPC.setProtocolEngine(conf, pbProtocol, ProtobufRpcEngine.class);
     RPC.Server server = new RPC.Builder(conf).setProtocol(pbProtocol)
         .setInstance(blockingService).setBindAddress(addr.getHostName())
@@ -171,7 +171,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
         .setSecretManager(secretManager).setPortRangeConfig(portRangeConfig)
         .build();
     LOG.info("Adding protocol "+pbProtocol.getCanonicalName()+" to the server");
-    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, pbProtocol, blockingService);
+    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, pbProtocol, blockingService);   // 从服务器获取支持协议的版本和签名，通过 blockingService 实现
     return server;
   }
 }

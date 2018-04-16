@@ -83,7 +83,7 @@ public class NMCollectorService extends CompositeService implements
         rpc.getServer(CollectorNodemanagerProtocol.class, this,
             collectorServerAddress, serverConf, null,
             conf.getInt(YarnConfiguration.NM_COLLECTOR_SERVICE_THREAD_COUNT,
-                YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_THREAD_COUNT));
+                YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_THREAD_COUNT));      // 传入 this 即接收 CollectorNodemanagerProtocol 的 rpc 请求
 
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false)) {
