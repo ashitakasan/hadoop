@@ -67,7 +67,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   // For drainEventsOnStop enabled only, block newly coming events into the
   // queue while stopping.
   private volatile boolean blockNewEvents = false;
-  private final EventHandler<Event> handlerInstance = new GenericEventHandler();
+  private final EventHandler<Event> handlerInstance = new GenericEventHandler();    // 通用的 handler，构造 AsyncDispatcher 时会帮助构造一个默认的
 
   private Thread eventHandlingThread;
   protected final Map<Class<? extends Enum>, EventHandler> eventDispatchers;
@@ -97,7 +97,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     dispatcherThreadName = dispatcherName;
   }
 
-  Runnable createThread() {
+  Runnable createThread() {                                                         // 新建 dispatch 线程，用来调度事件
     return new Runnable() {
       @Override
       public void run() {
@@ -115,7 +115,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
           }
           Event event;
           try {
-            event = eventQueue.take();
+            event = eventQueue.take();                                              // 从 eventQueue 中获取一个事件，调度该事件
           } catch(InterruptedException ie) {
             if (!stopped) {
               LOG.warn("AsyncDispatcher thread interrupted", ie);
@@ -123,7 +123,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
             return;
           }
           if (event != null) {
-            dispatch(event);
+            dispatch(event);                                                        // 拿出一个事件后，就要交给 handler 处理
           }
         }
       }
@@ -216,14 +216,14 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   @SuppressWarnings("unchecked")
   @Override
   public void register(Class<? extends Enum> eventType,
-      EventHandler handler) {
+      EventHandler handler) {                                                       // 注册一种事件类型的 handler
     /* check to see if we have a listener registered */
     EventHandler<Event> registeredHandler = (EventHandler<Event>)
     eventDispatchers.get(eventType);
     LOG.info("Registering " + eventType + " for " + handler.getClass());
     if (registeredHandler == null) {
       eventDispatchers.put(eventType, handler);
-    } else if (!(registeredHandler instanceof MultiListenerHandler)){
+    } else if (!(registeredHandler instanceof MultiListenerHandler)){               // 如果一个事件需要多个 handler，则注册多个 handler
       /* for multiple listeners of an event add the multiple listener handler */
       MultiListenerHandler multiHandler = new MultiListenerHandler();
       multiHandler.addHandler(registeredHandler);
@@ -280,7 +280,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
    * are interested in the event.
    * @param <T> the type of event these multiple handlers are interested in.
    */
-  static class MultiListenerHandler implements EventHandler<Event> {
+  static class MultiListenerHandler implements EventHandler<Event> {                // MultiListenerHandler 会将事件循环的分发给各个 handler
     List<EventHandler<Event>> listofHandlers;
 
     public MultiListenerHandler() {

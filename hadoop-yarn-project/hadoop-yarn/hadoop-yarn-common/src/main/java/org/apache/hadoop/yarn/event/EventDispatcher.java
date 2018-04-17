@@ -37,7 +37,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  * @param <T> Type of Event
  */
 public class EventDispatcher<T extends Event> extends
-    AbstractService implements EventHandler<T> {
+    AbstractService implements EventHandler<T> {                                    // 专用的事件 Handler，调用者线程不被阻塞，预计可以高效地处理大量事件
 
   private final EventHandler<T> handler;
   private final BlockingQueue<T> eventQueue =
@@ -110,13 +110,13 @@ public class EventDispatcher<T extends Event> extends
   }
 
   @Override
-  public void handle(T event) {
+  public void handle(T event) {                                                     // 接收到事件后，现将事件放入一个队列，然后再慢慢交给 handler 处理
     try {
       int qSize = eventQueue.size();
       if (qSize !=0 && qSize %1000 == 0) {
         LOG.info("Size of " + getName() + " event-queue is " + qSize);
       }
-      int remCapacity = eventQueue.remainingCapacity();
+      int remCapacity = eventQueue.remainingCapacity();                             // 队列容量是 int max
       if (remCapacity < 1000) {
         LOG.info("Very low remaining capacity on " + getName() + "" +
             "event queue: " + remCapacity);
