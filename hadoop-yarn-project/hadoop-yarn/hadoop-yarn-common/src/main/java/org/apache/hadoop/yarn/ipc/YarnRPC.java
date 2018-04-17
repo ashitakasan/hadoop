@@ -45,7 +45,7 @@ public abstract class YarnRPC {
   public abstract Server getServer(Class protocol, Object instance,
       InetSocketAddress addr, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager,
-      int numHandlers, String portRangeConfig);
+      int numHandlers, String portRangeConfig);                                     // 构造 protocol rpc 服务类的实例，instance 为 rpc 方法实现类的实例
 
   public Server getServer(Class protocol, Object instance,
       InetSocketAddress addr, Configuration conf,
@@ -55,7 +55,7 @@ public abstract class YarnRPC {
         null);
   }
   
-  public static YarnRPC create(Configuration conf) {
+  public static YarnRPC create(Configuration conf) {                                // 获取 YarnRPC 实现类的构造工厂，默认为 HadoopYarnProtoRPC
     LOG.debug("Creating YarnRPC for " + 
         conf.get(YarnConfiguration.IPC_RPC_IMPL));
     String clazzName = conf.get(YarnConfiguration.IPC_RPC_IMPL);

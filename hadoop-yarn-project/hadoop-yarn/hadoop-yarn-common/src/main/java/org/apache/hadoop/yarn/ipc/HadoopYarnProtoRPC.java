@@ -63,7 +63,7 @@ public class HadoopYarnProtoRPC extends YarnRPC {
         " with " + numHandlers + " handlers");
     
     return RpcFactoryProvider.getServerFactory(conf).getServer(protocol, 
-        instance, addr, conf, secretManager, numHandlers, portRangeConfig);
+        instance, addr, conf, secretManager, numHandlers, portRangeConfig);         // 构造 rpc Server 类，接收 rpc 请求，并调用 instance 方法实现
 
   }
 

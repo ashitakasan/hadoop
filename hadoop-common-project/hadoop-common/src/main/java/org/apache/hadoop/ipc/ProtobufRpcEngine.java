@@ -423,7 +423,7 @@ public class ProtobufRpcEngine implements RpcEngine {                           
               .getClass().getName()), secretManager, portRangeConfig);
       this.verbose = verbose;  
       registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
-          protocolImpl);
+          protocolImpl);                                                            // 注册 protocolClass 接口的实现类 protocolImpl
     }
     
     /**
