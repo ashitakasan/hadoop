@@ -155,7 +155,7 @@ public class NodeManager extends CompositeService
   }
 
   protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-      Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+      Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {              // 创建 NodeStatusUpdater，用户通过心跳汇报 NM 信息
     return new NodeStatusUpdaterImpl(context, dispatcher, healthChecker,
         metrics, nodeLabelsProvider);
   }
